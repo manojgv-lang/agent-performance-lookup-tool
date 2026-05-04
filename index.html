@@ -215,16 +215,22 @@
       `;
     }
 
+    // Call-by-call breakdown with Idle call removed
     function renderCallsGrouped(calls) {
       const callsDiv = document.getElementById('calls');
       callsDiv.style.display = 'block';
+
+      // Remove Idle call rows
+      calls = (calls || []).filter(c => {
+        const q = (c.queryType || "").toLowerCase();
+        return q !== "idle call";
+      });
 
       if (!calls || calls.length === 0) {
         callsDiv.innerHTML = "<h2>Call-by-call breakdown</h2><p>No calls in this period.</p>";
         return;
       }
 
-      // Group by queryType (category)
       const groups = {};
       let totalGood = 0;
       let totalIssues = 0;
@@ -284,7 +290,6 @@
         html += "</tbody></table>";
       });
 
-      // Summary & Suggestions
       const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
 
       html += `
