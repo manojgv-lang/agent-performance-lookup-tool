@@ -15,7 +15,7 @@
       margin-bottom:20px;
     }
     .container {
-      max-width:900px;
+      max-width:1100px;
       margin:0 auto;
     }
     .card {
@@ -64,15 +64,32 @@
     table {
       border-collapse:collapse;
       width:100%;
-      font-size:14px;
+      font-size:13px;
     }
     th, td {
       padding:4px 8px;
       border:1px solid #ddd;
+      vertical-align:top;
     }
     th {
       background:#f3e5f5;
       text-align:left;
+    }
+    .category-header {
+      background:#f3e5f5;
+      font-weight:bold;
+      padding:6px 8px;
+      margin-top:8px;
+    }
+    .good-row {
+      background:#e8f5e9;
+    }
+    .issue-row {
+      background:#ffebee;
+    }
+    .summary-box {
+      white-space:pre-wrap;
+      font-size:13px;
     }
   </style>
 </head>
@@ -101,7 +118,6 @@
   </div>
 
   <script>
-    // Use your working Apps Script URL here
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
     async function init() {
@@ -160,7 +176,7 @@
           }
 
           renderSummary(data);
-          renderCallsTable(data.calls);
+          renderCallsGrouped(data.calls);
 
           status.textContent = "Done.";
         })
@@ -199,7 +215,7 @@
       `;
     }
 
-    function renderCallsTable(calls) {
+    function renderCallsGrouped(calls) {
       const callsDiv = document.getElementById('calls');
       callsDiv.style.display = 'block';
 
@@ -208,42 +224,118 @@
         return;
       }
 
-      let rowsHtml = "";
+      // Group by queryType (category)
+      const groups = {};
+      let totalGood = 0;
+      let totalIssues = 0;
+      const allIssueTexts = [];
 
       calls.forEach(c => {
-        const score = c.score != null ? c.score : "";
-        let bg = "";
-        if (typeof score === "number") {
-          if (score < 70) bg = "background:#ffebee;";        // light red
-          else if (score >= 90) bg = "background:#e8f5e9;";   // light green
-        }
-
-        rowsHtml += `
-          <tr style="${bg}">
-            <td style="text-align:center;">${c.slNo}</td>
-            <td>${c.callDate}</td>
-            <td style="text-align:right;">${score === "" ? "" : score + "%"}</td>
-            <td>${c.queryType || ""}</td>
-          </tr>
-        `;
+        const category = c.queryType || "Other";
+        if (!groups[category]) groups[category] = [];
+        groups[category].push(c);
       });
 
-      callsDiv.innerHTML = `
-        <h2>Call-by-call breakdown</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>SL No</th>
-              <th>Date</th>
-              <th>Score</th>
-              <th>Issue Type</th>
+      let html = '<h2>Call-by-call breakdown</h2>';
+
+      Object.keys(groups).forEach(cat => {
+        const list = groups[cat];
+        html += `<div class="category-header">${cat.toUpperCase()} (${list.length} calls)</div>`;
+        html += `
+          <table>
+            <thead>
+              <tr>
+                <th>SL No</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        list.forEach(c => {
+          const score = typeof c.score === "number" ? c.score : parseFloat(c.score || "0");
+          let statusText = "";
+          let rowClass = "";
+          if (!isNaN(score) && score >= 90) {
+            statusText = "✅ Good";
+            rowClass = "good-row";
+            totalGood++;
+          } else {
+            statusText = "❌ Issues";
+            rowClass = "issue-row";
+            totalIssues++;
+            if (c.feedback) {
+              allIssueTexts.push(c.feedback);
+            }
+          }
+
+          html += `
+            <tr class="${rowClass}">
+              <td style="text-align:center;">${c.slNo}</td>
+              <td>${c.queryType || ""}</td>
+              <td style="text-align:center;">${statusText}</td>
+              <td>${(c.feedback || "").replace(/\n/g, "<br>")}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
+          `;
+        });
+
+        html += "</tbody></table>";
+      });
+
+      // Summary & Suggestions
+      const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
+
+      html += `
+        <h2>Summary & Suggestions</h2>
+        <div class="summary-box">${issueSummary}</div>
       `;
+
+      callsDiv.innerHTML = html;
+    }
+
+    function buildSuggestions(totalGood, totalIssues, issues) {
+      let text = "";
+      text += `📈 OVERALL: ${totalGood} good calls | ${totalIssues} calls with issues\n\n`;
+
+      if (issues.length > 0) {
+        text += "⚠️ TOP ISSUES:\n";
+        const freq = {};
+        issues.forEach(t => {
+          const key = t.toLowerCase();
+          freq[key] = (freq[key] || 0) + 1;
+        });
+        const top = Object.keys(freq).sort((a,b) => freq[b]-freq[a]).slice(0,3);
+        top.forEach(i => {
+          const clean = i.charAt(0).toUpperCase() + i.slice(1);
+          text += `  • ${clean}\n`;
+        });
+        text += "\n";
+      }
+
+      text += "💡 SUGGESTIONS:\n";
+      const total = totalGood + totalIssues;
+      const issueRate = total ? totalIssues / total : 0;
+
+      let count = 1;
+      if (issueRate > 0.5) {
+        text += `  ${count++}. PRIORITY: Focus on quality - ${Math.round(issueRate*100)}% calls have issues\n`;
+      }
+      const allIssueText = issues.join(" ").toLowerCase();
+      if (allIssueText.includes("pitch")) {
+        text += `  ${count++}. Practice pitch delivery and ensure all mandatory points are covered\n`;
+      }
+      if (allIssueText.includes("procedure") || allIssueText.includes("process")) {
+        text += `  ${count++}. Review standard operating procedures regularly\n`;
+      }
+      if (allIssueText.includes("empathetic") || allIssueText.includes("tone")) {
+        text += `  ${count++}. Work on empathy and tone while addressing customer concerns\n`;
+      }
+      if (count === 1) {
+        text += "  • Excellent performance! Maintain current standards\n";
+      }
+      return text;
     }
 
     window.addEventListener('load', init);
