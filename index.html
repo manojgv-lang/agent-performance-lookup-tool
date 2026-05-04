@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agent QA Report</title>
+  <title>Volt Agent QA</title>
   <style>
     /* Global layout */
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:#f3f4f6;
+      background:#020617;
       margin:0;
       padding:0;
+      color:#0f172a;
     }
     header {
-      background:#111827;
+      background:#020617;
       color:#e5e7eb;
-      padding:10px 24px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.3);
+      padding:10px 20px;
+      border-bottom:1px solid #111827;
     }
     header .wrap {
       max-width:1100px;
@@ -24,206 +25,290 @@
       align-items:center;
       justify-content:space-between;
     }
-    header .title {
+    .app-name {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .app-logo {
+      width:26px;
+      height:26px;
+      border-radius:8px;
+      background:linear-gradient(135deg,#4f46e5,#22c55e);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+      font-weight:700;
+      color:white;
+    }
+    .app-title {
       font-size:18px;
-      font-weight:600;
+      font-weight:650;
     }
-    header .subtitle {
-      font-size:12px;
-      opacity:0.8;
-    }
-    header .badge {
+    .app-subtitle {
       font-size:11px;
       opacity:0.8;
-      border:1px solid rgba(148,163,184,0.6);
-      border-radius:999px;
-      padding:4px 10px;
     }
 
     .page {
-      padding:24px 16px 32px;
+      padding:24px 12px 32px;
     }
     .container {
       max-width:1100px;
       margin:0 auto;
     }
 
+    /* Layout: form + results */
+    .layout {
+      display:grid;
+      grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+      gap:20px;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+
     /* Cards & typography */
+    .card {
+      background:#020617;
+      border-radius:18px;
+      padding:18px 20px;
+      box-shadow:0 18px 45px rgba(15,23,42,0.8);
+      border:1px solid #1f2937;
+    }
+    .card-light {
+      background:#020617;
+      border-radius:18px;
+      padding:18px 20px;
+      box-shadow:0 18px 45px rgba(15,23,42,0.8);
+      border:1px solid #1e293b;
+    }
     h1 {
       margin:0 0 16px 0;
-      font-size:24px;
+      font-size:22px;
       font-weight:650;
-      color:#111827;
+      color:#e5e7eb;
     }
-    .card {
-      background:#ffffff;
-      border-radius:14px;
-      padding:20px 22px;
-      margin-bottom:20px;
-      box-shadow:0 10px 25px rgba(15,23,42,0.08);
-      border:1px solid #e5e7eb;
+    .section-title {
+      font-size:14px;
+      font-weight:600;
+      color:#e5e7eb;
+      margin-bottom:10px;
+      display:flex;
+      align-items:center;
+      gap:6px;
     }
+    .section-title span.icon {
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      background:#4f46e5;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      color:white;
+    }
+
     label {
       display:block;
-      margin-top:8px;
+      margin-top:10px;
       margin-bottom:4px;
-      font-weight:600;
-      font-size:13px;
-      color:#111827;
+      font-weight:500;
+      font-size:12px;
+      color:#cbd5f5;
     }
     select, input[type="date"] {
       width:100%;
       padding:8px 10px;
-      border-radius:8px;
-      border:1px solid #d1d5db;
+      border-radius:10px;
+      border:1px solid #475569;
       box-sizing:border-box;
       font-size:13px;
-      background:#f9fafb;
+      background:#020617;
+      color:#e5e7eb;
     }
     select:focus, input[type="date"]:focus {
       outline:none;
-      border-color:#2563eb;
-      box-shadow:0 0 0 1px #2563eb33;
-      background:#ffffff;
+      border-color:#6366f1;
+      box-shadow:0 0 0 1px #6366f177;
     }
     button {
       margin-top:16px;
-      padding:9px 18px;
+      width:100%;
+      padding:10px 16px;
       border:none;
       border-radius:999px;
-      background:#2563eb;
+      background:linear-gradient(135deg,#6366f1,#22c55e);
       color:white;
       font-size:14px;
-      font-weight:500;
+      font-weight:600;
       cursor:pointer;
-      box-shadow:0 4px 10px rgba(37,99,235,0.4);
-      transition:background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow:0 8px 22px rgba(79,70,229,0.6);
+      transition:transform 0.1s, box-shadow 0.15s, filter 0.15s;
     }
     button:hover:not(:disabled) {
-      background:#1d4ed8;
       transform:translateY(-1px);
-      box-shadow:0 6px 18px rgba(37,99,235,0.45);
+      box-shadow:0 12px 30px rgba(79,70,229,0.7);
+      filter:brightness(1.03);
     }
     button:active:not(:disabled) {
       transform:translateY(0);
-      box-shadow:0 3px 8px rgba(37,99,235,0.3);
+      box-shadow:0 6px 16px rgba(79,70,229,0.5);
     }
     button:disabled {
-      background:#9ca3af;
+      background:#4b5563;
       box-shadow:none;
       cursor:not-allowed;
+      filter:none;
     }
     #status {
       margin-top:8px;
-      font-size:12px;
-      color:#4b5563;
+      font-size:11px;
+      color:#9ca3af;
     }
 
+    /* Hints */
+    .hint {
+      margin-top:10px;
+      font-size:11px;
+      color:#9ca3af;
+      line-height:1.4;
+    }
+
+    /* Results area */
     #summary h2,
     #calls h2 {
       margin-top:0;
-      font-size:18px;
+      font-size:16px;
       margin-bottom:10px;
-      color:#111827;
+      color:#e5e7eb;
     }
 
-    /* Tables */
     table {
       border-collapse:collapse;
       width:100%;
-      font-size:13px;
+      font-size:12px;
+      color:#e5e7eb;
     }
     th, td {
       padding:6px 8px;
-      border:1px solid #e5e7eb;
+      border:1px solid #1e293b;
       vertical-align:top;
     }
     th {
-      background:#f3e5f5;
+      background:#020617;
       text-align:left;
       font-weight:600;
-      color:#4b5563;
+      color:#a5b4fc;
+    }
+    tr:nth-child(even) td {
+      background:#020617;
+    }
+
+    .summary-table td:first-child {
+      width:110px;
+      font-weight:500;
+      color:#9ca3af;
+      background:#020617;
     }
 
     .category-header {
-      background:#7c3aed;
-      color:white;
-      font-weight:600;
+      margin-top:14px;
       padding:6px 10px;
-      margin-top:12px;
-      border-radius:6px 6px 0 0;
-      font-size:13px;
+      border-radius:10px 10px 0 0;
+      background:linear-gradient(90deg,#4f46e5,#06b6d4);
+      color:white;
+      font-size:12px;
+      font-weight:600;
     }
     .good-row {
-      background:#e8f5e9;
+      background:#022c22;
     }
     .issue-row {
-      background:#ffebee;
+      background:#451a1a;
     }
     .summary-box {
       white-space:pre-wrap;
-      font-size:13px;
-      background:#f9fafb;
-      border-radius:8px;
-      padding:10px 12px;
-      border:1px dashed #d1d5db;
-    }
-
-    /* How-to card */
-    .hint-card {
-      background:#eff6ff;
-      border:1px solid #bfdbfe;
-    }
-    .hint-card ul {
-      margin:6px 0 0 18px;
-      padding:0;
       font-size:12px;
-      color:#374151;
+      background:#020617;
+      border-radius:12px;
+      padding:10px 12px;
+      border:1px dashed #1e293b;
+      color:#e5e7eb;
+      line-height:1.5;
+    }
+    .badge-chip {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      color:#9ca3af;
+      margin-top:4px;
+    }
+    .badge-dot {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#22c55e;
     }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
-      <div>
-        <div class="title">Volt Agent QA</div>
-        <div class="subtitle">Performance lookup tool for QA team leads and agents</div>
+      <div class="app-name">
+        <div class="app-logo">V</div>
+        <div>
+          <div class="app-title">Volt Agent QA</div>
+          <div class="app-subtitle">Daily QA performance in one view</div>
+        </div>
       </div>
-      <div class="badge">Internal tool · Apps Script + Vercel</div>
+      <div class="badge-chip">
+        <span class="badge-dot"></span>
+        Live dashboard
+      </div>
     </div>
   </header>
 
   <div class="page">
     <div class="container">
-      <h1>Agent QA Report</h1>
+      <div class="layout">
+        <!-- Left: Filters -->
+        <div class="card">
+          <div class="section-title">
+            <span class="icon">⚙</span>
+            Filters
+          </div>
 
-      <div class="card">
-        <label for="agent">Agent</label>
-        <select id="agent">
-          <option value="">Loading...</option>
-        </select>
+          <label for="agent">Agent</label>
+          <select id="agent">
+            <option value="">Loading...</option>
+          </select>
 
-        <label for="from">From Date (yyyy-mm-dd)</label>
-        <input id="from" type="date">
+          <label for="from">From Date (yyyy-mm-dd)</label>
+          <input id="from" type="date">
 
-        <label for="to">To Date (yyyy-mm-dd)</label>
-        <input id="to" type="date">
+          <label for="to">To Date (yyyy-mm-dd)</label>
+          <input id="to" type="date">
 
-        <button id="runBtn" onclick="runReport()">Generate Report</button>
-        <div id="status">Waiting...</div>
+          <button id="runBtn" onclick="runReport()">Generate Report</button>
+          <div id="status">Waiting...</div>
+
+          <div class="hint">
+            Tip: Use this page in full screen (F11) for a more app-like experience. Idle calls are ignored automatically.
+          </div>
+        </div>
+
+        <!-- Right: Results -->
+        <div>
+          <div id="summary" class="card-light" style="display:none;"></div>
+          <div id="calls" class="card-light" style="display:none;"></div>
+        </div>
       </div>
-
-      <div class="card hint-card">
-        <strong style="font-size:13px;">How to use</strong>
-        <ul>
-          <li>Select an agent and date range, then click <strong>Generate Report</strong>.</li>
-          <li>Scroll down to view performance summary, category-wise calls, and suggestions.</li>
-          <li>Idle calls are automatically excluded from the analysis.</li>
-        </ul>
-      </div>
-
-      <div id="summary" class="card" style="display:none;"></div>
-      <div id="calls" class="card" style="display:none;"></div>
     </div>
   </div>
 
@@ -245,7 +330,7 @@
           return;
         }
 
-        agentSelect.innerHTML = '<option value="">-- Select Agent --</option>';
+        agentSelect.innerHTML = '<option value="">Select agent...</option>';
 
         data.agents.forEach(name => {
           const opt = document.createElement('option');
@@ -303,22 +388,25 @@
       summaryDiv.style.display = 'block';
 
       summaryDiv.innerHTML = `
-        <h2>Performance Summary</h2>
-        <table>
+        <div class="section-title">
+          <span class="icon">📊</span>
+          Performance summary
+        </div>
+        <table class="summary-table">
           <tr>
-            <td style="font-weight:bold;">Agent</td>
+            <td>Agent</td>
             <td>${data.agent}</td>
           </tr>
           <tr>
-            <td style="font-weight:bold;">Total audits</td>
+            <td>Total audits</td>
             <td>${data.totalAudits}</td>
           </tr>
           <tr>
-            <td style="font-weight:bold;">Average score</td>
+            <td>Average score</td>
             <td>${data.averageScore}%</td>
           </tr>
           <tr>
-            <td style="font-weight:bold;">Period</td>
+            <td>Period</td>
             <td>${data.period}</td>
           </tr>
         </table>
@@ -336,7 +424,13 @@
       });
 
       if (!calls || calls.length === 0) {
-        callsDiv.innerHTML = "<h2>Call-by-call breakdown</h2><p>No calls in this period.</p>";
+        callsDiv.innerHTML = `
+          <div class="section-title">
+            <span class="icon">📋</span>
+            Call-by-call breakdown
+          </div>
+          <p style="font-size:12px;color:#9ca3af;">No calls in this period (excluding idle calls).</p>
+        `;
         return;
       }
 
@@ -351,7 +445,12 @@
         groups[category].push(c);
       });
 
-      let html = '<h2>Call-by-call breakdown</h2>';
+      let html = `
+        <div class="section-title">
+          <span class="icon">📋</span>
+          Call-by-call breakdown
+        </div>
+      `;
 
       Object.keys(groups).forEach(cat => {
         const list = groups[cat];
@@ -374,11 +473,11 @@
           let statusText = "";
           let rowClass = "";
           if (!isNaN(score) && score >= 90) {
-            statusText = "✅ Good";
+            statusText = "Good";
             rowClass = "good-row";
             totalGood++;
           } else {
-            statusText = "❌ Issues";
+            statusText = "Issues";
             rowClass = "issue-row";
             totalIssues++;
             if (c.feedback) {
@@ -402,7 +501,7 @@
       const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
 
       html += `
-        <h2>Summary & Suggestions</h2>
+        <h2 style="margin-top:18px;">Summary &amp; suggestions</h2>
         <div class="summary-box">${issueSummary}</div>
       `;
 
@@ -411,10 +510,10 @@
 
     function buildSuggestions(totalGood, totalIssues, issues) {
       let text = "";
-      text += `📈 OVERALL: ${totalGood} good calls | ${totalIssues} calls with issues\n\n`;
+      text += `Overall: ${totalGood} good calls | ${totalIssues} calls with issues\n\n`;
 
       if (issues.length > 0) {
-        text += "⚠️ TOP ISSUES:\n";
+        text += "Top issue themes:\n";
         const freq = {};
         issues.forEach(t => {
           const key = t.toLowerCase();
@@ -428,26 +527,26 @@
         text += "\n";
       }
 
-      text += "💡 SUGGESTIONS:\n";
+      text += "Next steps for this agent:\n";
       const total = totalGood + totalIssues;
       const issueRate = total ? totalIssues / total : 0;
 
       let count = 1;
       if (issueRate > 0.5) {
-        text += `  ${count++}. PRIORITY: Focus on quality - ${Math.round(issueRate*100)}% calls have issues\n`;
+        text += `  ${count++}. Focus coaching on high-risk call types (over ${Math.round(issueRate*100)}% of calls have issues).\n`;
       }
       const allIssueText = issues.join(" ").toLowerCase();
       if (allIssueText.includes("pitch")) {
-        text += `  ${count++}. Practice pitch delivery and ensure all mandatory points are covered\n`;
+        text += `  ${count++}. Practice pitch delivery and ensure all mandatory points are covered.\n`;
       }
       if (allIssueText.includes("procedure") || allIssueText.includes("process")) {
-        text += `  ${count++}. Review standard operating procedures regularly\n`;
+        text += `  ${count++}. Review SOPs and quick-reference guides for these queries.\n`;
       }
       if (allIssueText.includes("empathetic") || allIssueText.includes("tone")) {
-        text += `  ${count++}. Work on empathy and tone while addressing customer concerns\n`;
+        text += `  ${count++}. Run a short session on empathy, tone, and active listening.\n`;
       }
       if (count === 1) {
-        text += "  • Excellent performance! Maintain current standards\n";
+        text += "  • No critical patterns found. Maintain current performance.\n";
       }
       return text;
     }
