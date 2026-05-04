@@ -57,10 +57,22 @@
       font-size:13px;
       color:#333;
     }
-    #summary pre, #calls pre {
-      white-space:pre-wrap;
-      font-family:inherit;
+    #summary h2,
+    #calls h2 {
+      margin-top:0;
+    }
+    table {
+      border-collapse:collapse;
+      width:100%;
       font-size:14px;
+    }
+    th, td {
+      padding:4px 8px;
+      border:1px solid #ddd;
+    }
+    th {
+      background:#f3e5f5;
+      text-align:left;
     }
   </style>
 </head>
@@ -107,10 +119,8 @@
           return;
         }
 
-        // Clear old options
         agentSelect.innerHTML = '<option value="">-- Select Agent --</option>';
 
-        // Add agents
         data.agents.forEach(name => {
           const opt = document.createElement('option');
           opt.value = name;
@@ -149,37 +159,8 @@
             return;
           }
 
-          // Summary section
-          const summaryDiv = document.getElementById('summary');
-          summaryDiv.style.display = 'block';
-          summaryDiv.innerHTML = `
-            <h2>Summary</h2>
-            <pre>
-Agent      : ${data.agent}
-Period     : ${data.period}
-Total audits: ${data.totalAudits}
-Average score: ${data.averageScore}%
-            </pre>
-          `;
-
-          // Calls section (simple list for now)
-          const callsDiv = document.getElementById('calls');
-          callsDiv.style.display = 'block';
-
-          if (!data.calls || data.calls.length === 0) {
-            callsDiv.innerHTML = "<h2>Calls</h2><p>No calls in this period.</p>";
-          } else {
-            let text = "SL No | Date       | Score | Issue Type\n";
-            text += "-------------------------------------------\n";
-            data.calls.forEach(c => {
-              text += `${c.slNo} | ${c.callDate} | ${c.score}% | ${c.queryType || ""}\n`;
-            });
-
-            callsDiv.innerHTML = `
-              <h2>Calls</h2>
-              <pre>${text}</pre>
-            `;
-          }
+          renderSummary(data);
+          renderCallsTable(data.calls);
 
           status.textContent = "Done.";
         })
@@ -191,7 +172,80 @@ Average score: ${data.averageScore}%
         });
     }
 
-    // Run init when page finishes loading
+    function renderSummary(data) {
+      const summaryDiv = document.getElementById('summary');
+      summaryDiv.style.display = 'block';
+
+      summaryDiv.innerHTML = `
+        <h2>Performance Summary</h2>
+        <table>
+          <tr>
+            <td style="font-weight:bold;">Agent</td>
+            <td>${data.agent}</td>
+          </tr>
+          <tr>
+            <td style="font-weight:bold;">Total audits</td>
+            <td>${data.totalAudits}</td>
+          </tr>
+          <tr>
+            <td style="font-weight:bold;">Average score</td>
+            <td>${data.averageScore}%</td>
+          </tr>
+          <tr>
+            <td style="font-weight:bold;">Period</td>
+            <td>${data.period}</td>
+          </tr>
+        </table>
+      `;
+    }
+
+    function renderCallsTable(calls) {
+      const callsDiv = document.getElementById('calls');
+      callsDiv.style.display = 'block';
+
+      if (!calls || calls.length === 0) {
+        callsDiv.innerHTML = "<h2>Call-by-call breakdown</h2><p>No calls in this period.</p>";
+        return;
+      }
+
+      let rowsHtml = "";
+
+      calls.forEach(c => {
+        const score = c.score != null ? c.score : "";
+        let bg = "";
+        if (typeof score === "number") {
+          if (score < 70) bg = "background:#ffebee;";        // light red
+          else if (score >= 90) bg = "background:#e8f5e9;";   // light green
+        }
+
+        rowsHtml += `
+          <tr style="${bg}">
+            <td style="text-align:center;">${c.slNo}</td>
+            <td>${c.callDate}</td>
+            <td style="text-align:right;">${score === "" ? "" : score + "%"}</td>
+            <td>${c.queryType || ""}</td>
+          </tr>
+        `;
+      });
+
+      callsDiv.innerHTML = `
+        <h2>Call-by-call breakdown</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>SL No</th>
+              <th>Date</th>
+              <th>Score</th>
+              <th>Issue Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+    }
+
     window.addEventListener('load', init);
   </script>
 </body>
