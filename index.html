@@ -24,7 +24,12 @@
 
   <div class="card">
     <label>Agent Name</label>
-    <input id="agent" placeholder="Exact agent name as in sheet" />
+    <select id="agent">
+      <option value="">-- Select Agent --</option>
+      <option>Manoj G V</option>
+      <!-- add more agents exactly as they appear in Raw Audits -->
+      <!-- <option>Another Agent Name</option> -->
+    </select>
 
     <label>From Date (yyyy-mm-dd)</label>
     <input id="from" type="date" />
@@ -51,7 +56,7 @@
       const btn = document.getElementById('runBtn');
 
       if (!agent || !from || !to) {
-        status.textContent = "Please fill Agent, From and To dates.";
+        status.textContent = "Please select Agent, From and To dates.";
         return;
       }
 
@@ -123,7 +128,7 @@
             <td>${c.callDate || ""}</td>
             <td>${c.queryType || ""}</td>
             <td>${c.score != null ? c.score + "%" : ""}</td>
-            <td>${(c.feedback || "").replace(/\n/g, "<br>")}</td>
+            <td>${(c.feedback || "").replace(/\\n/g, "<br>")}</td>
           </tr>
         `;
       });
