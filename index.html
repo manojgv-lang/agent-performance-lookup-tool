@@ -1,59 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Agent Performance Lookup Tool</title>
+  <meta charset="UTF-8">
+  <title>Agent QA Report</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-    h1 { background: #4CAF50; color: white; padding: 10px 15px; }
-    .card { background: white; padding: 15px; margin-top: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 8px; }
-    input, select { padding: 6px; margin-top: 4px; }
-    button { margin-top: 12px; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;}
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
-    th { background: #E1BEE7; }
-    .good { background: #E8F5E9; }
-    .issue { background: #FFEBEE; }
-    #status { margin-top: 10px; color: #555; }
+    body {
+      font-family: Arial, sans-serif;
+      background:#f5f5f5;
+      margin:0;
+      padding:20px;
+    }
+    h1 {
+      text-align:center;
+      margin-bottom:20px;
+    }
+    .container {
+      max-width:900px;
+      margin:0 auto;
+    }
+    .card {
+      background:#fff;
+      border-radius:6px;
+      padding:16px 20px;
+      margin-bottom:16px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+    }
+    label {
+      display:block;
+      margin-top:8px;
+      margin-bottom:4px;
+      font-weight:bold;
+    }
+    select, input[type="date"] {
+      width:100%;
+      padding:8px;
+      border-radius:4px;
+      border:1px solid #ccc;
+      box-sizing:border-box;
+    }
+    button {
+      margin-top:16px;
+      padding:10px 16px;
+      border:none;
+      border-radius:4px;
+      background:#1976d2;
+      color:white;
+      font-size:14px;
+      cursor:pointer;
+    }
+    button:disabled {
+      background:#90a4ae;
+      cursor:not-allowed;
+    }
+    #status {
+      margin-top:8px;
+      font-size:13px;
+      color:#333;
+    }
+    #summary pre, #calls pre {
+      white-space:pre-wrap;
+      font-family:inherit;
+      font-size:14px;
+    }
   </style>
 </head>
 <body>
-  <h1>🎯 Agent Performance Lookup Tool</h1>
+  <div class="container">
+    <h1>Agent QA Report</h1>
 
-  <div class="card">
-    <label>Agent Name</label>
-    <select id="agent">
-      <option value="">-- Select Agent --</option>
-      <option>Manoj G V</option>
-      <!-- add more agents exactly as they appear in Raw Audits -->
-      <!-- <option>Another Agent Name</option> -->
-    </select>
+    <div class="card">
+      <label for="agent">Agent</label>
+      <select id="agent">
+        <option value="">Loading...</option>
+      </select>
 
-    <label>From Date (yyyy-mm-dd)</label>
-    <input id="from" type="date" />
+      <label for="from">From Date (yyyy-mm-dd)</label>
+      <input id="from" type="date">
 
-    <label>To Date (yyyy-mm-dd)</label>
-    <input id="to" type="date" />
+      <label for="to">To Date (yyyy-mm-dd)</label>
+      <input id="to" type="date">
 
-    <button id="runBtn" onclick="runReport()">Generate Report</button>
-    <div id="status"></div>
+      <button id="runBtn" onclick="runReport()">Generate Report</button>
+      <div id="status">Waiting...</div>
+    </div>
+
+    <div id="summary" class="card" style="display:none;"></div>
+    <div id="calls" class="card" style="display:none;"></div>
   </div>
 
-  <div id="summary" class="card" style="display:none;"></div>
-  <div id="calls" class="card" style="display:none;"></div>
-
   <script>
-    // Use YOUR working Apps Script URL here
+    // Use your working Apps Script URL here
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
+
+    async function init() {
+      const agentSelect = document.getElementById('agent');
+      const status = document.getElementById('status');
+
+      status.textContent = "Loading agents...";
+
+      try {
+        const res = await fetch(`${SCRIPT_URL}?listAgents=1`);
+        const data = await res.json();
+
+        if (!data.ok) {
+          status.textContent = "Error loading agents: " + (data.error || "Unknown error");
+          return;
+        }
+
+        // Clear old options
+        agentSelect.innerHTML = '<option value="">-- Select Agent --</option>';
+
+        // Add agents
+        data.agents.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          agentSelect.appendChild(opt);
+        });
+
+        status.textContent = "Agents loaded. Select agent and dates, then Generate Report.";
+      } catch (err) {
+        status.textContent = "Failed to load agents: " + err.message;
+      }
+    }
 
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
       const from  = document.getElementById('from').value;
       const to    = document.getElementById('to').value;
       const status = document.getElementById('status');
-      const btn = document.getElementById('runBtn');
+      const btn    = document.getElementById('runBtn');
 
       if (!agent || !from || !to) {
         status.textContent = "Please select Agent, From and To dates.";
@@ -70,72 +146,53 @@
         .then(data => {
           if (!data.ok) {
             status.textContent = "Error: " + (data.error || "Unknown error");
-            btn.disabled = false;
             return;
           }
 
-          renderSummary(data);
-          renderCalls(data.calls);
+          // Summary section
+          const summaryDiv = document.getElementById('summary');
+          summaryDiv.style.display = 'block';
+          summaryDiv.innerHTML = `
+            <h2>Summary</h2>
+            <pre>
+Agent      : ${data.agent}
+Period     : ${data.period}
+Total audits: ${data.totalAudits}
+Average score: ${data.averageScore}%
+            </pre>
+          `;
+
+          // Calls section (simple list for now)
+          const callsDiv = document.getElementById('calls');
+          callsDiv.style.display = 'block';
+
+          if (!data.calls || data.calls.length === 0) {
+            callsDiv.innerHTML = "<h2>Calls</h2><p>No calls in this period.</p>";
+          } else {
+            let text = "SL No | Date       | Score | Issue Type\n";
+            text += "-------------------------------------------\n";
+            data.calls.forEach(c => {
+              text += `${c.slNo} | ${c.callDate} | ${c.score}% | ${c.queryType || ""}\n`;
+            });
+
+            callsDiv.innerHTML = `
+              <h2>Calls</h2>
+              <pre>${text}</pre>
+            `;
+          }
+
           status.textContent = "Done.";
-          btn.disabled = false;
         })
         .catch(err => {
-          status.textContent = "Error: " + err.message;
+          status.textContent = "Failed: " + err.message;
+        })
+        .finally(() => {
           btn.disabled = false;
         });
     }
 
-    function renderSummary(data) {
-      const div = document.getElementById('summary');
-      div.style.display = 'block';
-      div.innerHTML = `
-        <h2>📊 Performance Summary</h2>
-        <p><strong>Agent:</strong> ${data.agent}</p>
-        <p><strong>Total Audits:</strong> ${data.totalAudits}</p>
-        <p><strong>Average Score:</strong> ${data.averageScore}%</p>
-        <p><strong>Period:</strong> ${data.period}</p>
-      `;
-    }
-
-    function renderCalls(calls) {
-      const div = document.getElementById('calls');
-      div.style.display = 'block';
-
-      if (!calls || calls.length === 0) {
-        div.innerHTML = "<p>No calls in this period.</p>";
-        return;
-      }
-
-      let html = `
-        <h2>📋 Call-by-Call Breakdown</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>SL No</th>
-              <th>Call Date</th>
-              <th>Issue Type</th>
-              <th>Score</th>
-              <th>Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      calls.forEach(c => {
-        html += `
-          <tr>
-            <td>${c.slNo || ""}</td>
-            <td>${c.callDate || ""}</td>
-            <td>${c.queryType || ""}</td>
-            <td>${c.score != null ? c.score + "%" : ""}</td>
-            <td>${(c.feedback || "").replace(/\\n/g, "<br>")}</td>
-          </tr>
-        `;
-      });
-
-      html += "</tbody></table>";
-      div.innerHTML = html;
-    }
+    // Run init when page finishes loading
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>
