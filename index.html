@@ -4,82 +4,155 @@
   <meta charset="UTF-8">
   <title>Agent QA Report</title>
   <style>
+    /* Global layout */
     body {
-      font-family: Arial, sans-serif;
-      background:#f5f5f5;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#f3f4f6;
       margin:0;
-      padding:20px;
+      padding:0;
     }
-    h1 {
-      text-align:center;
-      margin-bottom:20px;
+    header {
+      background:#111827;
+      color:#e5e7eb;
+      padding:10px 24px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.3);
+    }
+    header .wrap {
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    header .title {
+      font-size:18px;
+      font-weight:600;
+    }
+    header .subtitle {
+      font-size:12px;
+      opacity:0.8;
+    }
+    header .badge {
+      font-size:11px;
+      opacity:0.8;
+      border:1px solid rgba(148,163,184,0.6);
+      border-radius:999px;
+      padding:4px 10px;
+    }
+
+    .page {
+      padding:24px 16px 32px;
     }
     .container {
       max-width:1100px;
       margin:0 auto;
     }
+
+    /* Cards & typography */
+    h1 {
+      margin:0 0 16px 0;
+      font-size:24px;
+      font-weight:650;
+      color:#111827;
+    }
     .card {
-      background:#fff;
-      border-radius:6px;
-      padding:16px 20px;
-      margin-bottom:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+      background:#ffffff;
+      border-radius:14px;
+      padding:20px 22px;
+      margin-bottom:20px;
+      box-shadow:0 10px 25px rgba(15,23,42,0.08);
+      border:1px solid #e5e7eb;
     }
     label {
       display:block;
       margin-top:8px;
       margin-bottom:4px;
-      font-weight:bold;
+      font-weight:600;
+      font-size:13px;
+      color:#111827;
     }
     select, input[type="date"] {
       width:100%;
-      padding:8px;
-      border-radius:4px;
-      border:1px solid #ccc;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #d1d5db;
       box-sizing:border-box;
+      font-size:13px;
+      background:#f9fafb;
+    }
+    select:focus, input[type="date"]:focus {
+      outline:none;
+      border-color:#2563eb;
+      box-shadow:0 0 0 1px #2563eb33;
+      background:#ffffff;
     }
     button {
       margin-top:16px;
-      padding:10px 16px;
+      padding:9px 18px;
       border:none;
-      border-radius:4px;
-      background:#1976d2;
+      border-radius:999px;
+      background:#2563eb;
       color:white;
       font-size:14px;
+      font-weight:500;
       cursor:pointer;
+      box-shadow:0 4px 10px rgba(37,99,235,0.4);
+      transition:background 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    button:hover:not(:disabled) {
+      background:#1d4ed8;
+      transform:translateY(-1px);
+      box-shadow:0 6px 18px rgba(37,99,235,0.45);
+    }
+    button:active:not(:disabled) {
+      transform:translateY(0);
+      box-shadow:0 3px 8px rgba(37,99,235,0.3);
     }
     button:disabled {
-      background:#90a4ae;
+      background:#9ca3af;
+      box-shadow:none;
       cursor:not-allowed;
     }
     #status {
       margin-top:8px;
-      font-size:13px;
-      color:#333;
+      font-size:12px;
+      color:#4b5563;
     }
+
     #summary h2,
     #calls h2 {
       margin-top:0;
+      font-size:18px;
+      margin-bottom:10px;
+      color:#111827;
     }
+
+    /* Tables */
     table {
       border-collapse:collapse;
       width:100%;
       font-size:13px;
     }
     th, td {
-      padding:4px 8px;
-      border:1px solid #ddd;
+      padding:6px 8px;
+      border:1px solid #e5e7eb;
       vertical-align:top;
     }
     th {
       background:#f3e5f5;
       text-align:left;
+      font-weight:600;
+      color:#4b5563;
     }
+
     .category-header {
-      background:#f3e5f5;
-      font-weight:bold;
-      padding:6px 8px;
-      margin-top:8px;
+      background:#7c3aed;
+      color:white;
+      font-weight:600;
+      padding:6px 10px;
+      margin-top:12px;
+      border-radius:6px 6px 0 0;
+      font-size:13px;
     }
     .good-row {
       background:#e8f5e9;
@@ -90,31 +163,68 @@
     .summary-box {
       white-space:pre-wrap;
       font-size:13px;
+      background:#f9fafb;
+      border-radius:8px;
+      padding:10px 12px;
+      border:1px dashed #d1d5db;
+    }
+
+    /* How-to card */
+    .hint-card {
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+    }
+    .hint-card ul {
+      margin:6px 0 0 18px;
+      padding:0;
+      font-size:12px;
+      color:#374151;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Agent QA Report</h1>
-
-    <div class="card">
-      <label for="agent">Agent</label>
-      <select id="agent">
-        <option value="">Loading...</option>
-      </select>
-
-      <label for="from">From Date (yyyy-mm-dd)</label>
-      <input id="from" type="date">
-
-      <label for="to">To Date (yyyy-mm-dd)</label>
-      <input id="to" type="date">
-
-      <button id="runBtn" onclick="runReport()">Generate Report</button>
-      <div id="status">Waiting...</div>
+  <header>
+    <div class="wrap">
+      <div>
+        <div class="title">Volt Agent QA</div>
+        <div class="subtitle">Performance lookup tool for QA team leads and agents</div>
+      </div>
+      <div class="badge">Internal tool · Apps Script + Vercel</div>
     </div>
+  </header>
 
-    <div id="summary" class="card" style="display:none;"></div>
-    <div id="calls" class="card" style="display:none;"></div>
+  <div class="page">
+    <div class="container">
+      <h1>Agent QA Report</h1>
+
+      <div class="card">
+        <label for="agent">Agent</label>
+        <select id="agent">
+          <option value="">Loading...</option>
+        </select>
+
+        <label for="from">From Date (yyyy-mm-dd)</label>
+        <input id="from" type="date">
+
+        <label for="to">To Date (yyyy-mm-dd)</label>
+        <input id="to" type="date">
+
+        <button id="runBtn" onclick="runReport()">Generate Report</button>
+        <div id="status">Waiting...</div>
+      </div>
+
+      <div class="card hint-card">
+        <strong style="font-size:13px;">How to use</strong>
+        <ul>
+          <li>Select an agent and date range, then click <strong>Generate Report</strong>.</li>
+          <li>Scroll down to view performance summary, category-wise calls, and suggestions.</li>
+          <li>Idle calls are automatically excluded from the analysis.</li>
+        </ul>
+      </div>
+
+      <div id="summary" class="card" style="display:none;"></div>
+      <div id="calls" class="card" style="display:none;"></div>
+    </div>
   </div>
 
   <script>
@@ -215,7 +325,6 @@
       `;
     }
 
-    // Call-by-call breakdown with Idle call removed
     function renderCallsGrouped(calls) {
       const callsDiv = document.getElementById('calls');
       callsDiv.style.display = 'block';
