@@ -81,15 +81,6 @@
       color: #555;
       font-size: 13px;
     }
-    .summary-text h3 {
-      margin-top: 16px;
-      margin-bottom: 6px;
-    }
-    .summary-text ul {
-      margin: 4px 0 0 18px;
-      padding: 0;
-      font-size: 13px;
-    }
     .block-title {
       font-weight: 700;
       margin-top: 10px;
@@ -121,6 +112,7 @@
   </div>
 
   <script>
+    // 1) Put your Apps Script web‑app URL here (ending with /exec)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
     async function init() {
@@ -177,6 +169,9 @@
             return;
           }
 
+          // store full result so other functions can read summary fields
+          window.lastResult = data;
+
           renderSummary(data);
           renderCallsWithInsights(data.calls);
           status.textContent = "Done.";
@@ -204,85 +199,68 @@
       const div = document.getElementById('calls');
       div.style.display = 'block';
 
-      // remove idle calls
-      calls = (calls || []).filter(c => {
-        const q = (c.queryType || "").toLowerCase();
-        return q !== "idle call";
-      });
-
       if (!calls || calls.length === 0) {
         div.innerHTML = "<p>No calls in this period (excluding idle calls).</p>";
         return;
       }
 
+      let html = "<h2>📋 Call Breakdown</h2>";
+
+      // Split good vs issues based on score ≥ 90
       const goodCalls = [];
       const issueCalls = [];
-      const categoryStats = {};
-      const issueFeedbacks = [];
-
       calls.forEach(c => {
         const scoreNum = typeof c.score === "number"
           ? c.score
           : parseFloat(c.score || "0");
-        const category = c.queryType || "Other";
-        if (!categoryStats[category]) {
-          categoryStats[category] = { good: 0, issue: 0, total: 0 };
-        }
-        const isGood = !isNaN(scoreNum) && scoreNum >= 90;
-
-        if (isGood) {
+        if (!isNaN(scoreNum) && scoreNum >= 90) {
           goodCalls.push(c);
-          categoryStats[category].good++;
         } else {
           issueCalls.push(c);
-          categoryStats[category].issue++;
-          if (c.feedback) issueFeedbacks.push(c.feedback);
         }
-        categoryStats[category].total++;
       });
 
-      let html = "<h2>📋 Call Breakdown</h2>";
-
-      // Category summary
-      html += `
-        <h3>📂 Category-wise summary</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Issue Type</th>
-              <th>Good calls</th>
-              <th>Calls with issues</th>
-              <th>Issue %</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      Object.keys(categoryStats).forEach(cat => {
-        const s = categoryStats[cat];
-        const issuePct = s.total ? Math.round((s.issue / s.total) * 100) : 0;
-        html += `
-          <tr>
-            <td>${cat}</td>
-            <td>${s.good}</td>
-            <td>${s.issue}</td>
-            <td>${issuePct}%</td>
-          </tr>
-        `;
-      });
-      html += "</tbody></table>";
-
-      // Good calls
+      // Good calls table
       html += `<h3 style="margin-top:16px;">✅ Good calls (${goodCalls.length})</h3>`;
       html += goodCalls.length ? buildTableHTML(goodCalls, "good")
                                : "<p>No good calls in this period.</p>";
 
-      // Issue calls
+      // Issue calls table
       html += `<h3 style="margin-top:16px;">⚠️ Calls with issues (${issueCalls.length})</h3>`;
       html += issueCalls.length ? buildTableHTML(issueCalls, "issue")
                                 : "<p>No calls with issues in this period.</p>";
 
-      // SUMMARY & SUGGESTIONS block (sheet style)
-      html += buildSummarySuggestionsBlock(goodCalls.length, issueCalls.length, calls.length, issueFeedbacks);
+      // SUMMARY & SUGGESTIONS from backend
+      const overall = (window.lastResult && window.lastResult.overallLine) || "";
+      const topIssues = (window.lastResult && window.lastResult.topIssues) || [];
+      const suggText = (window.lastResult && window.lastResult.suggestionsText) || "";
+
+      html += `
+        <div style="margin-top:18px; padding:12px; background:#e8f5e9; border-radius:6px;">
+          <div class="block-title">SUMMARY &amp; SUGGESTIONS</div>
+          <p><strong>OVERALL:</strong> ${overall.replace("OVERALL: ","")}</p>
+
+          <p class="block-title">TOP ISSUES:</p>
+          <ul>
+            ${
+              topIssues.length
+                ? topIssues.map(t => `<li>${t}.</li>`).join("")
+                : "<li>No detailed issue feedback available.</li>"
+            }
+          </ul>
+
+          <p class="block-title">SUGGESTIONS:</p>
+          <ul>
+            ${
+              suggText
+                .split(/\\n/)
+                .filter(x => x.trim() !== "")
+                .map(t => `<li>${t}</li>`)
+                .join("") || "<li>No suggestions generated.</li>"
+            }
+          </ul>
+        </div>
+      `;
 
       div.innerHTML = html;
     }
@@ -313,70 +291,6 @@
         `;
       });
       html += "</tbody></table>";
-      return html;
-    }
-
-    function buildSummarySuggestionsBlock(goodCount, issueCount, totalCalls, issueFeedbacks) {
-      const issueRate = totalCalls ? Math.round((issueCount / totalCalls) * 100) : 0;
-
-      // Collect sentences from issue feedback
-      const sentenceFreq = {};
-      issueFeedbacks.forEach(fb => {
-        fb.split(/[\.\n]/).forEach(line => {
-          const t = line.trim();
-          if (t.length < 20) return;     // ignore very short bits
-          const key = t.toLowerCase();
-          sentenceFreq[key] = (sentenceFreq[key] || 0) + 1;
-        });
-      });
-
-      const topSentences = Object.keys(sentenceFreq)
-        .sort((a, b) => sentenceFreq[b] - sentenceFreq[a])
-        .slice(0, 4)
-        .map(t => t.charAt(0).toUpperCase() + t.slice(1));
-
-      // Suggestion generation based on keywords
-      const allText = issueFeedbacks.join(" ").toLowerCase();
-      const suggestions = [];
-
-      suggestions.push(`PRIORITY: Focus on quality – ${issueRate}% calls have issues.`);
-
-      if (allText.includes("pitch")) {
-        suggestions.push("Practice pitch delivery before the call ends so feedback / cross-sell is not missed.");
-      }
-      if (allText.includes("feedback")) {
-        suggestions.push("Ask user’s time and then clearly pitch for feedback so feedback fill rate is not reduced.");
-      }
-      if (allText.includes("roi") || allText.includes("interest") || allText.includes("outstanding amount")) {
-        suggestions.push("Explain clearly how reducing ROI or paying outstanding amount will impact EMI; ensure user fully understands.");
-      }
-      if (suggestions.length === 1) {
-        suggestions.push("Review a few issue calls with the agent and agree on 2–3 clear action points.");
-      }
-
-      let html = `
-        <div style="margin-top:18px; padding:12px; background:#e8f5e9; border-radius:6px;">
-          <div class="block-title">SUMMARY &amp; SUGGESTIONS</div>
-          <p><strong>OVERALL:</strong> ${goodCount} good calls | ${issueCount} calls with issues.</p>
-      `;
-
-      html += `<p class="block-title">TOP ISSUES:</p>`;
-      if (topSentences.length === 0) {
-        html += "<ul><li>No detailed issue feedback available.</li></ul>";
-      } else {
-        html += "<ul>";
-        topSentences.forEach(s => {
-          html += `<li>${s}.</li>`;
-        });
-        html += "</ul>";
-      }
-
-      html += `<p class="block-title">SUGGESTIONS:</p><ul>`;
-      suggestions.forEach((s, i) => {
-        html += `<li>${i + 1}. ${s}</li>`;
-      });
-      html += "</ul></div>";
-
       return html;
     }
 
