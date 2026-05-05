@@ -462,7 +462,6 @@
 
       const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
 
-      // Summary on left, single Dispute button on right
       html += `
         <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-top:18px; gap:12px;">
           <div style="flex:1 1 auto;">
@@ -524,8 +523,6 @@
       return text;
     }
 
-    // ---- Dispute dialog helpers ----
-
     function openDisputeDialog() {
       const dlg = document.getElementById('disputeDialog');
       const slInput = document.getElementById('dlgSl');
@@ -582,7 +579,7 @@
 
         const data = await res.json();
         if (!data.ok) {
-          statusSpan.textContent = "Error: " + (data.error || "Could not save dispute";
+          statusSpan.textContent = "Error: " + (data.error || "Could not save dispute");
           statusSpan.style.color = "#d32f2f";
           closeDisputeDialog();
           return;
