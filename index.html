@@ -89,13 +89,11 @@
 
     <div class="card">
       <label>Agent Name</label>
-      <!-- changed: input -> select (auto loads from script) -->
       <select id="agent">
         <option value="">Loading...</option>
       </select>
 
       <label>From Date (yyyy-mm-dd)</label>
-      <!-- dates unchanged -->
       <input id="from" type="date" />
 
       <label>To Date (yyyy-mm-dd)</label>
@@ -112,7 +110,6 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
-    // NEW: load agent list from Apps Script
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -168,7 +165,7 @@
           }
 
           renderSummary(data);
-          renderCalls(data.calls);
+          renderCallsWithInsights(data.calls);
           status.textContent = "Done.";
           btn.disabled = false;
         })
@@ -190,12 +187,19 @@
       `;
     }
 
-    function renderCalls(calls) {
+    // Calls table + strengths + issues, excluding Idle calls
+    function renderCallsWithInsights(calls) {
       const div = document.getElementById('calls');
       div.style.display = 'block';
 
+      // remove idle calls
+      calls = (calls || []).filter(c => {
+        const q = (c.queryType || "").toLowerCase();
+        return q !== "idle call";
+      });
+
       if (!calls || calls.length === 0) {
-        div.innerHTML = "<p>No calls in this period.</p>";
+        div.innerHTML = "<p>No calls in this period (excluding idle calls).</p>";
         return;
       }
 
@@ -214,9 +218,29 @@
           <tbody>
       `;
 
+      let goodCount = 0;
+      let issueCount = 0;
+      const issueFeedbacks = [];
+      const goodFeedbacks = [];
+
       calls.forEach(c => {
+        const scoreNum = typeof c.score === "number"
+          ? c.score
+          : parseFloat(c.score || "0");
+
+        let rowClass = "";
+        if (!isNaN(scoreNum) && scoreNum >= 90) {
+          rowClass = "good";
+          goodCount++;
+          if (c.feedback) goodFeedbacks.push(c.feedback);
+        } else {
+          rowClass = "issue";
+          issueCount++;
+          if (c.feedback) issueFeedbacks.push(c.feedback);
+        }
+
         html += `
-          <tr>
+          <tr class="${rowClass}">
             <td>${c.slNo || ""}</td>
             <td>${c.callDate || ""}</td>
             <td>${c.queryType || ""}</td>
@@ -227,10 +251,86 @@
       });
 
       html += "</tbody></table>";
+
+      const strengthsText = buildStrengthsText(goodCount, goodFeedbacks);
+      const issuesText = buildIssuesText(issueCount, issueFeedbacks);
+
+      html += `
+        <div style="margin-top:12px; font-size:13px;">
+          <h3>✅ Key strengths</h3>
+          <p>${strengthsText}</p>
+
+          <h3>⚠️ Major improvement areas</h3>
+          <p>${issuesText}</p>
+        </div>
+      `;
+
       div.innerHTML = html;
     }
 
-    // run on page load
+    function buildStrengthsText(goodCount, feedbacks) {
+      if (goodCount === 0) {
+        return "No high-scoring calls in this period.";
+      }
+      let text = `Agent handled ${goodCount} calls with strong quality. `;
+
+      const joined = feedbacks.join(" ").toLowerCase();
+      const positives = [];
+      if (joined.includes("empathy") || joined.includes("empathetic")) {
+        positives.push("good empathy and tone");
+      }
+      if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
+        positives.push("good adherence to process/SOP");
+      }
+      if (joined.includes("pitch") || joined.includes("sales")) {
+        positives.push("strong pitch and sales skills");
+      }
+      if (joined.includes("probing")) {
+        positives.push("effective probing questions");
+      }
+
+      if (positives.length > 0) {
+        text += "Observed strengths include " + positives.join(", ") + ".";
+      } else {
+        text += "Most good calls show consistent handling of queries and compliance.";
+      }
+      return text;
+    }
+
+    function buildIssuesText(issueCount, feedbacks) {
+      if (issueCount === 0) {
+        return "No major issues found in this period.";
+      }
+
+      let text = `There are ${issueCount} calls with issues. `;
+
+      const freq = {};
+      feedbacks.forEach(fb => {
+        fb.split(/[\.\n]/).forEach(line => {
+          const t = line.trim();
+          if (t.length < 5) return;
+          const key = t.toLowerCase();
+          freq[key] = (freq[key] || 0) + 1;
+        });
+      });
+
+      const top = Object.keys(freq)
+        .sort((a, b) => freq[b] - freq[a])
+        .slice(0, 3);
+
+      if (top.length > 0) {
+        text += "Top recurring issues: ";
+        text += top
+          .map(t => t.charAt(0).toUpperCase() + t.slice(1))
+          .join("; ");
+        text += ".";
+      } else {
+        text += "Issues are spread across different behaviours without a single dominant pattern.";
+      }
+
+      return text;
+    }
+
     window.addEventListener('load', init);
   </script>
 </body>
