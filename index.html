@@ -119,6 +119,46 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
+    // Keyword → tag rules (edit this to tune behaviour)
+    const ISSUE_RULES = [
+      {
+        id: "pitch",
+        label: "Pitch / cross‑sell missed or incomplete",
+        keywords: ["missed pitch", "could not pitch", "pitch points", "pitch for a feedback"],
+        suggestion: "Coach on complete pitch flow and mandatory pitch points; review 3–5 calls where the pitch was missed or incomplete."
+      },
+      {
+        id: "info_gap",
+        label: "Incomplete or uninformed information",
+        keywords: ["uninformed pointers", "uninformed points", "wrong info", "incorrect information", "not informed", "information was not"],
+        suggestion: "Reinforce use of KB/SOP while answering; ask agent to summarise the final resolution clearly before closing the call."
+      },
+      {
+        id: "empathy",
+        label: "Tone / empathy concerns",
+        keywords: ["not empathetic", "tone was", "rude", "no empathy", "sound rude"],
+        suggestion: "Run a short coaching on empathy statements, acknowledging concerns and keeping a calm, professional tone."
+      },
+      {
+        id: "process",
+        label: "Process / SOP not followed",
+        keywords: ["did not follow process", "process deviation", "sop", "procedure not followed", "process was not followed"],
+        suggestion: "Revisit SOP for this query type; have the agent explain the exact steps back and keep a quick checklist for live calls."
+      },
+      {
+        id: "compliance",
+        label: "Compliance / red‑flag risk",
+        keywords: ["red-flagged", "red flagged", "compliance"],
+        suggestion: "Explain impact of compliance misses; clarify non‑negotiable points and do a quick quiz on 3–4 red‑flag scenarios."
+      },
+      {
+        id: "documentation",
+        label: "Disposition / documentation gap",
+        keywords: ["documentation", "disposition", "tagging"],
+        suggestion: "Audit a few tickets only for documentation; reinforce correct disposition and notes at end of every call."
+      }
+    ];
+
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -215,9 +255,8 @@
       const issueCalls = [];
       const goodFeedbacks = [];
       const issueFeedbacks = [];
-
-      // category summary: { category: {good, issue, total} }
       const categoryStats = {};
+      const issueTagCounts = {};  // tag id -> count
 
       calls.forEach(c => {
         const scoreNum = typeof c.score === "number"
@@ -238,14 +277,17 @@
         } else {
           issueCalls.push(c);
           categoryStats[category].issue++;
-          if (c.feedback) issueFeedbacks.push(c.feedback);
+          if (c.feedback) {
+            issueFeedbacks.push(c.feedback);
+            applyIssueTags(c.feedback, issueTagCounts);
+          }
         }
         categoryStats[category].total++;
       });
 
       let html = "<h2>📋 Call Breakdown</h2>";
 
-      // Category summary table
+      // Category summary
       html += `
         <h3>📂 Category-wise summary</h3>
         <table>
@@ -273,29 +315,18 @@
       });
       html += "</tbody></table>";
 
-      // Good calls table
-      html += `
-        <h3 style="margin-top:16px;">✅ Good calls (${goodCalls.length})</h3>
-      `;
-      if (goodCalls.length === 0) {
-        html += "<p>No good calls in this period.</p>";
-      } else {
-        html += buildTableHTML(goodCalls, "good");
-      }
+      // Good calls
+      html += `<h3 style="margin-top:16px;">✅ Good calls (${goodCalls.length})</h3>`;
+      html += goodCalls.length ? buildTableHTML(goodCalls, "good")
+                               : "<p>No good calls in this period.</p>";
 
-      // Issue calls table
-      html += `
-        <h3 style="margin-top:16px;">⚠️ Calls with issues (${issueCalls.length})</h3>
-      `;
-      if (issueCalls.length === 0) {
-        html += "<p>No calls with issues in this period.</p>";
-      } else {
-        html += buildTableHTML(issueCalls, "issue");
-      }
+      // Issue calls
+      html += `<h3 style="margin-top:16px;">⚠️ Calls with issues (${issueCalls.length})</h3>`;
+      html += issueCalls.length ? buildTableHTML(issueCalls, "issue")
+                                : "<p>No calls with issues in this period.</p>";
 
-      // Insights text
       const strengthsText = buildStrengthsText(goodCalls.length, goodFeedbacks, categoryStats);
-      const issuesTextHTML = buildIssuesAndSuggestions(issueCalls.length, issueFeedbacks, calls.length, categoryStats);
+      const issuesTextHTML = buildIssuesAndSuggestions(issueCalls.length, issueFeedbacks, calls.length, categoryStats, issueTagCounts);
 
       html += `
         <div class="summary-text" style="margin-top:16px; font-size:13px;">
@@ -341,12 +372,22 @@
       return html;
     }
 
+    // Tag issues using ISSUE_RULES
+    function applyIssueTags(feedback, tagCounts) {
+      const text = feedback.toLowerCase();
+      ISSUE_RULES.forEach(rule => {
+        const hit = rule.keywords.some(kw => text.includes(kw.toLowerCase()));
+        if (hit) {
+          tagCounts[rule.id] = (tagCounts[rule.id] || 0) + 1;
+        }
+      });
+    }
+
     function buildStrengthsText(goodCount, feedbacks, categoryStats) {
       if (goodCount === 0) {
         return "No high-scoring calls in this period.";
       }
 
-      // find top categories by good calls
       const catList = Object.keys(categoryStats)
         .map(cat => ({ cat, good: categoryStats[cat].good }))
         .filter(x => x.good > 0)
@@ -363,16 +404,16 @@
       const joined = feedbacks.join(" ").toLowerCase();
       const positives = [];
       if (joined.includes("empathy") || joined.includes("empathetic") || joined.includes("polite")) {
-        positives.push("consistently good empathy and polite tone");
+        positives.push("good empathy and polite tone");
       }
       if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
-        positives.push("good adherence to process/SOP on most calls");
+        positives.push("good adherence to process/SOP");
       }
       if (joined.includes("pitch") || joined.includes("sales")) {
         positives.push("effective product / service pitching");
       }
       if (joined.includes("probing")) {
-        positives.push("good probing questions to understand customer need");
+        positives.push("good probing to understand customer need");
       }
       if (joined.includes("communication") || joined.includes("clear")) {
         positives.push("clear and structured communication");
@@ -386,7 +427,7 @@
       return text;
     }
 
-    function buildIssuesAndSuggestions(issueCount, feedbacks, totalCalls, categoryStats) {
+    function buildIssuesAndSuggestions(issueCount, feedbacks, totalCalls, categoryStats, tagCounts) {
       if (issueCount === 0) {
         return "<p>No major issues found in this period.</p>";
       }
@@ -394,7 +435,7 @@
       const issueRate = totalCalls ? Math.round((issueCount / totalCalls) * 100) : 0;
       let html = `<p>There are ${issueCount} calls with issues (about ${issueRate}% of total evaluated calls).</p>`;
 
-      // category-wise high-issue categories
+      // category hotspots
       const problematicCats = Object.keys(categoryStats)
         .map(cat => {
           const s = categoryStats[cat];
@@ -406,68 +447,59 @@
         .slice(0, 4);
 
       if (problematicCats.length > 0) {
-        html += "<p><strong>Category-wise issue hotspots:</strong></p><ul>";
+        html += "<p><strong>Category‑wise issue hotspots:</strong></p><ul>";
         problematicCats.forEach(x => {
           html += `<li>${x.cat}: ${x.issue} issue calls out of ${x.total} (${x.issuePct}% issue rate).</li>`;
         });
         html += "</ul>";
       }
 
-      // recurring text patterns
-      const freq = {};
-      feedbacks.forEach(fb => {
-        fb.split(/[\.\n]/).forEach(line => {
-          const t = line.trim();
-          if (t.length < 10) return;
-          const key = t.toLowerCase();
-          freq[key] = (freq[key] || 0) + 1;
-        });
-      });
-
-      const top = Object.keys(freq)
-        .sort((a, b) => freq[b] - freq[a])
+      // tag‑based issues and suggestions
+      const sortedTags = Object.keys(tagCounts)
+        .map(id => {
+          const rule = ISSUE_RULES.find(r => r.id === id);
+          return rule ? { id, label: rule.label, suggestion: rule.suggestion, count: tagCounts[id] } : null;
+        })
+        .filter(x => x)
+        .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      if (top.length > 0) {
-        html += "<p><strong>Common issue statements seen in QA notes:</strong></p><ul>";
-        top.forEach(t => {
-          const nice = t.charAt(0).toUpperCase() + t.slice(1);
-          html += `<li>${nice}</li>`;
+      if (sortedTags.length > 0) {
+        html += "<p><strong>Behaviour‑wise issues from QA notes:</strong></p><ul>";
+        sortedTags.forEach(t => {
+          html += `<li>${t.label}: seen in ${t.count} call(s).</li>`;
         });
         html += "</ul>";
-      }
 
-      // Behaviour-based suggestions
-      const allText = feedbacks.join(" ").toLowerCase();
-      const suggestions = [];
-
-      if (allText.includes("missed pitch") || allText.includes("pitch points")) {
-        suggestions.push("Run targeted coaching on complete pitch flow and mandatory pitch points; review 3–5 calls where pitch was missed.");
-      }
-      if (allText.includes("uninformed") || allText.includes("information") || allText.includes("wrong info")) {
-        suggestions.push("Focus on giving complete and accurate information; use knowledge base / SOP while on call to avoid uninformed pointers.");
-      }
-      if (allText.includes("red-flagged") || allText.includes("red flagged") || allText.includes("compliance")) {
-        suggestions.push("Review compliance / red-flag scenarios with the agent and do a short quiz to ensure understanding.");
-      }
-      if (allText.includes("empathy") || allText.includes("tone") || allText.includes("rude")) {
-        suggestions.push("Plan a short refresher on empathy, tone and handling difficult customers, with role-play examples.");
-      }
-      if (allText.includes("process") || allText.includes("procedure") || allText.includes("sop")) {
-        suggestions.push("Revisit SOP steps for the top 2–3 categories with high issue % and keep a quick reference checklist at desk.");
-      }
-      if (allText.includes("documentation") || allText.includes("disposition") || allText.includes("tagging")) {
-        suggestions.push("Reinforce correct documentation / disposition at end of call; audit a few tickets only for tagging accuracy.");
-      }
-
-      if (suggestions.length > 0) {
         html += "<p><strong>Suggested next steps for this agent:</strong></p><ul>";
-        suggestions.forEach(s => {
-          html += `<li>${s}</li>`;
+        sortedTags.forEach(t => {
+          html += `<li>${t.suggestion}</li>`;
         });
         html += "</ul>";
       } else {
-        html += "<p><strong>Suggested next step:</strong> review a sample of issue calls in coaching, agree on 2–3 clear behavioural goals, and re-check in the next audit cycle.</p>";
+        // fallback – if no rule matched, show generic patterns
+        const freq = {};
+        feedbacks.forEach(fb => {
+          fb.split(/[\.\n]/).forEach(line => {
+            const t = line.trim();
+            if (t.length < 10) return;
+            const key = t.toLowerCase();
+            freq[key] = (freq[key] || 0) + 1;
+          });
+        });
+        const top = Object.keys(freq)
+          .sort((a, b) => freq[b] - freq[a])
+          .slice(0, 5);
+
+        if (top.length > 0) {
+          html += "<p><strong>Common issue statements seen in QA notes:</strong></p><ul>";
+          top.forEach(t => {
+            const nice = t.charAt(0).toUpperCase() + t.slice(1);
+            html += `<li>${nice}</li>`;
+          });
+          html += "</ul>";
+        }
+        html += "<p><strong>Suggested next step:</strong> review a sample of issue calls in coaching and agree on 2–3 clear action items.</p>";
       }
 
       return html;
