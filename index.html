@@ -287,8 +287,8 @@
   </div>
 
   <script>
-    // 1) PASTE YOUR REAL EXEC URL HERE:
-    const SCRIPT_URL = "PASTE_YOUR_EXEC_URL_HERE";
+    // Use your real Web App URL here
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -551,7 +551,7 @@
       dlg.style.display = "none";
     }
 
-    // Simple form-encoded POST to avoid preflight/CORS issues
+    // Form-encoded POST to avoid CORS preflight
     async function submitDisputeFromDialog() {
       const slInput = document.getElementById('dlgSl');
       const descInput = document.getElementById('dlgDesc');
