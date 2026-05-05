@@ -202,8 +202,66 @@
         return;
       }
 
+      const goodCalls = [];
+      const issueCalls = [];
+      const goodFeedbacks = [];
+      const issueFeedbacks = [];
+
+      calls.forEach(c => {
+        const scoreNum = typeof c.score === "number"
+          ? c.score
+          : parseFloat(c.score || "0");
+
+        if (!isNaN(scoreNum) && scoreNum >= 90) {
+          goodCalls.push(c);
+          if (c.feedback) goodFeedbacks.push(c.feedback);
+        } else {
+          issueCalls.push(c);
+          if (c.feedback) issueFeedbacks.push(c.feedback);
+        }
+      });
+
+      let html = "<h2>📋 Call Breakdown</h2>";
+
+      // Good calls table
+      html += `
+        <h3>✅ Good calls (${goodCalls.length})</h3>
+      `;
+      if (goodCalls.length === 0) {
+        html += "<p>No good calls in this period.</p>";
+      } else {
+        html += buildTableHTML(goodCalls, "good");
+      }
+
+      // Issue calls table
+      html += `
+        <h3 style="margin-top:16px;">⚠️ Calls with issues (${issueCalls.length})</h3>
+      `;
+      if (issueCalls.length === 0) {
+        html += "<p>No calls with issues in this period.</p>";
+      } else {
+        html += buildTableHTML(issueCalls, "issue");
+      }
+
+      // Insights text
+      const strengthsText = buildStrengthsText(goodCalls.length, goodFeedbacks);
+      const issuesText = buildIssuesText(issueCalls.length, issueFeedbacks, calls.length);
+
+      html += `
+        <div style="margin-top:16px; font-size:13px;">
+          <h3>🟢 Key strengths summary</h3>
+          <p>${strengthsText}</p>
+
+          <h3>🔴 Major issues & suggestions</h3>
+          <p>${issuesText}</p>
+        </div>
+      `;
+
+      div.innerHTML = html;
+    }
+
+    function buildTableHTML(rows, rowClass) {
       let html = `
-        <h2>📋 Call-by-Call Breakdown</h2>
         <table>
           <thead>
             <tr>
@@ -217,27 +275,7 @@
           <tbody>
       `;
 
-      let goodCount = 0;
-      let issueCount = 0;
-      const issueFeedbacks = [];
-      const goodFeedbacks = [];
-
-      calls.forEach(c => {
-        const scoreNum = typeof c.score === "number"
-          ? c.score
-          : parseFloat(c.score || "0");
-
-        let rowClass = "";
-        if (!isNaN(scoreNum) && scoreNum >= 90) {
-          rowClass = "good";
-          goodCount++;
-          if (c.feedback) goodFeedbacks.push(c.feedback);
-        } else {
-          rowClass = "issue";
-          issueCount++;
-          if (c.feedback) issueFeedbacks.push(c.feedback);
-        }
-
+      rows.forEach(c => {
         html += `
           <tr class="${rowClass}">
             <td>${c.slNo || ""}</td>
@@ -250,58 +288,49 @@
       });
 
       html += "</tbody></table>";
-
-      const strengthsText = buildStrengthsText(goodCount, goodFeedbacks);
-      const issuesText = buildIssuesText(issueCount, issueFeedbacks);
-
-      html += `
-        <div style="margin-top:12px; font-size:13px;">
-          <h3>✅ Key strengths</h3>
-          <p>${strengthsText}</p>
-
-          <h3>⚠️ Major improvement areas</h3>
-          <p>${issuesText}</p>
-        </div>
-      `;
-
-      div.innerHTML = html;
+      return html;
     }
 
     function buildStrengthsText(goodCount, feedbacks) {
       if (goodCount === 0) {
         return "No high-scoring calls in this period.";
       }
-      let text = `Agent handled ${goodCount} calls with strong quality. `;
+
+      let text = `Agent has ${goodCount} calls with score ≥ 90%. `;
 
       const joined = feedbacks.join(" ").toLowerCase();
       const positives = [];
-      if (joined.includes("empathy") || joined.includes("empathetic")) {
-        positives.push("good empathy and tone");
+      if (joined.includes("empathy") || joined.includes("empathetic") || joined.includes("polite")) {
+        positives.push("strong empathy and polite tone");
       }
       if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
         positives.push("good adherence to process/SOP");
       }
       if (joined.includes("pitch") || joined.includes("sales")) {
-        positives.push("strong pitch and sales skills");
+        positives.push("effective pitch / sales conversation");
       }
       if (joined.includes("probing")) {
-        positives.push("effective probing questions");
+        positives.push("good probing questions to understand the query");
+      }
+      if (joined.includes("communication") || joined.includes("clear")) {
+        positives.push("clear communication with the customer");
       }
 
       if (positives.length > 0) {
-        text += "Observed strengths include " + positives.join(", ") + ".";
+        text += "Key strengths observed: " + positives.join(", ") + ".";
       } else {
-        text += "Most good calls show consistent handling of queries and compliance.";
+        text += "Strong calls show overall good query handling, compliance and customer experience.";
       }
       return text;
     }
 
-    function buildIssuesText(issueCount, feedbacks) {
+    function buildIssuesText(issueCount, feedbacks, totalCalls) {
       if (issueCount === 0) {
         return "No major issues found in this period.";
       }
 
-      let text = `There are ${issueCount} calls with issues. `;
+      const issueRate = totalCalls ? Math.round((issueCount / totalCalls) * 100) : 0;
+      let text = `There are ${issueCount} calls with issues, which is about ${issueRate}% of total evaluated calls. `;
 
       const freq = {};
       feedbacks.forEach(fb => {
@@ -318,13 +347,33 @@
         .slice(0, 3);
 
       if (top.length > 0) {
-        text += "Top recurring issues: ";
+        text += "Top recurring issue points: ";
         text += top
           .map(t => t.charAt(0).toUpperCase() + t.slice(1))
           .join("; ");
-        text += ".";
+        text += ". ";
+      }
+
+      // Simple suggestion bullets based on keywords
+      const allText = feedbacks.join(" ").toLowerCase();
+      const suggestions = [];
+      if (allText.includes("pitch")) {
+        suggestions.push("Refresh pitch guidelines and run a short mock-call practice on complete pitching.");
+      }
+      if (allText.includes("process") || allText.includes("procedure") || allText.includes("sop")) {
+        suggestions.push("Revisit SOPs for these query types and keep a quick reference sheet handy.");
+      }
+      if (allText.includes("empathy") || allText.includes("tone") || allText.includes("rude")) {
+        suggestions.push("Plan a quick coaching on empathy, active listening and tone of voice.");
+      }
+      if (allText.includes("documentation") || allText.includes("disposition") || allText.includes("tagging")) {
+        suggestions.push("Reinforce correct documentation / disposition codes at the end of calls.");
+      }
+
+      if (suggestions.length > 0) {
+        text += "Suggested next steps: " + suggestions.join(" ");
       } else {
-        text += "Issues are spread across different behaviours without a single dominant pattern.";
+        text += "Suggested next step: review a few issue calls in detail with the agent and agree on 2–3 concrete action points.";
       }
 
       return text;
