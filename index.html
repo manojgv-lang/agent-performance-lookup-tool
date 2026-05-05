@@ -90,6 +90,10 @@
       padding: 0;
       font-size: 13px;
     }
+    .block-title {
+      font-weight: 700;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -118,46 +122,6 @@
 
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
-
-    // Keyword → tag rules (edit this to tune behaviour)
-    const ISSUE_RULES = [
-      {
-        id: "pitch",
-        label: "Pitch / cross‑sell missed or incomplete",
-        keywords: ["missed pitch", "could not pitch", "pitch points", "pitch for a feedback"],
-        suggestion: "Coach on complete pitch flow and mandatory pitch points; review 3–5 calls where the pitch was missed or incomplete."
-      },
-      {
-        id: "info_gap",
-        label: "Incomplete or uninformed information",
-        keywords: ["uninformed pointers", "uninformed points", "wrong info", "incorrect information", "not informed", "information was not"],
-        suggestion: "Reinforce use of KB/SOP while answering; ask agent to summarise the final resolution clearly before closing the call."
-      },
-      {
-        id: "empathy",
-        label: "Tone / empathy concerns",
-        keywords: ["not empathetic", "tone was", "rude", "no empathy", "sound rude"],
-        suggestion: "Run a short coaching on empathy statements, acknowledging concerns and keeping a calm, professional tone."
-      },
-      {
-        id: "process",
-        label: "Process / SOP not followed",
-        keywords: ["did not follow process", "process deviation", "sop", "procedure not followed", "process was not followed"],
-        suggestion: "Revisit SOP for this query type; have the agent explain the exact steps back and keep a quick checklist for live calls."
-      },
-      {
-        id: "compliance",
-        label: "Compliance / red‑flag risk",
-        keywords: ["red-flagged", "red flagged", "compliance"],
-        suggestion: "Explain impact of compliance misses; clarify non‑negotiable points and do a quick quiz on 3–4 red‑flag scenarios."
-      },
-      {
-        id: "documentation",
-        label: "Disposition / documentation gap",
-        keywords: ["documentation", "disposition", "tagging"],
-        suggestion: "Audit a few tickets only for documentation; reinforce correct disposition and notes at end of every call."
-      }
-    ];
 
     async function init() {
       const agentSelect = document.getElementById('agent');
@@ -253,34 +217,26 @@
 
       const goodCalls = [];
       const issueCalls = [];
-      const goodFeedbacks = [];
-      const issueFeedbacks = [];
       const categoryStats = {};
-      const issueTagCounts = {};  // tag id -> count
+      const issueFeedbacks = [];
 
       calls.forEach(c => {
         const scoreNum = typeof c.score === "number"
           ? c.score
           : parseFloat(c.score || "0");
         const category = c.queryType || "Other";
-
         if (!categoryStats[category]) {
           categoryStats[category] = { good: 0, issue: 0, total: 0 };
         }
-
         const isGood = !isNaN(scoreNum) && scoreNum >= 90;
 
         if (isGood) {
           goodCalls.push(c);
           categoryStats[category].good++;
-          if (c.feedback) goodFeedbacks.push(c.feedback);
         } else {
           issueCalls.push(c);
           categoryStats[category].issue++;
-          if (c.feedback) {
-            issueFeedbacks.push(c.feedback);
-            applyIssueTags(c.feedback, issueTagCounts);
-          }
+          if (c.feedback) issueFeedbacks.push(c.feedback);
         }
         categoryStats[category].total++;
       });
@@ -325,18 +281,8 @@
       html += issueCalls.length ? buildTableHTML(issueCalls, "issue")
                                 : "<p>No calls with issues in this period.</p>";
 
-      const strengthsText = buildStrengthsText(goodCalls.length, goodFeedbacks, categoryStats);
-      const issuesTextHTML = buildIssuesAndSuggestions(issueCalls.length, issueFeedbacks, calls.length, categoryStats, issueTagCounts);
-
-      html += `
-        <div class="summary-text" style="margin-top:16px; font-size:13px;">
-          <h3>🟢 Key strengths summary</h3>
-          <p>${strengthsText}</p>
-
-          <h3>🔴 Major issues & suggestions</h3>
-          ${issuesTextHTML}
-        </div>
-      `;
+      // SUMMARY & SUGGESTIONS block (sheet style)
+      html += buildSummarySuggestionsBlock(goodCalls.length, issueCalls.length, calls.length, issueFeedbacks);
 
       div.innerHTML = html;
     }
@@ -355,7 +301,6 @@
           </thead>
           <tbody>
       `;
-
       rows.forEach(c => {
         html += `
           <tr class="${rowClass}">
@@ -367,140 +312,70 @@
           </tr>
         `;
       });
-
       html += "</tbody></table>";
       return html;
     }
 
-    // Tag issues using ISSUE_RULES
-    function applyIssueTags(feedback, tagCounts) {
-      const text = feedback.toLowerCase();
-      ISSUE_RULES.forEach(rule => {
-        const hit = rule.keywords.some(kw => text.includes(kw.toLowerCase()));
-        if (hit) {
-          tagCounts[rule.id] = (tagCounts[rule.id] || 0) + 1;
-        }
-      });
-    }
-
-    function buildStrengthsText(goodCount, feedbacks, categoryStats) {
-      if (goodCount === 0) {
-        return "No high-scoring calls in this period.";
-      }
-
-      const catList = Object.keys(categoryStats)
-        .map(cat => ({ cat, good: categoryStats[cat].good }))
-        .filter(x => x.good > 0)
-        .sort((a, b) => b.good - a.good)
-        .slice(0, 3);
-
-      let text = `Agent has ${goodCount} calls with score ≥ 90%. `;
-
-      if (catList.length > 0) {
-        const catNames = catList.map(c => `${c.cat} (${c.good})`).join(", ");
-        text += `Strong performance is seen mainly in: ${catNames}. `;
-      }
-
-      const joined = feedbacks.join(" ").toLowerCase();
-      const positives = [];
-      if (joined.includes("empathy") || joined.includes("empathetic") || joined.includes("polite")) {
-        positives.push("good empathy and polite tone");
-      }
-      if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
-        positives.push("good adherence to process/SOP");
-      }
-      if (joined.includes("pitch") || joined.includes("sales")) {
-        positives.push("effective product / service pitching");
-      }
-      if (joined.includes("probing")) {
-        positives.push("good probing to understand customer need");
-      }
-      if (joined.includes("communication") || joined.includes("clear")) {
-        positives.push("clear and structured communication");
-      }
-
-      if (positives.length > 0) {
-        text += "Behaviour-wise strengths: " + positives.join(", ") + ".";
-      } else {
-        text += "Good calls show overall strong query handling and compliance.";
-      }
-      return text;
-    }
-
-    function buildIssuesAndSuggestions(issueCount, feedbacks, totalCalls, categoryStats, tagCounts) {
-      if (issueCount === 0) {
-        return "<p>No major issues found in this period.</p>";
-      }
-
+    function buildSummarySuggestionsBlock(goodCount, issueCount, totalCalls, issueFeedbacks) {
       const issueRate = totalCalls ? Math.round((issueCount / totalCalls) * 100) : 0;
-      let html = `<p>There are ${issueCount} calls with issues (about ${issueRate}% of total evaluated calls).</p>`;
 
-      // category hotspots
-      const problematicCats = Object.keys(categoryStats)
-        .map(cat => {
-          const s = categoryStats[cat];
-          const issuePct = s.total ? Math.round((s.issue / s.total) * 100) : 0;
-          return { cat, issue: s.issue, total: s.total, issuePct };
-        })
-        .filter(x => x.issue > 0)
-        .sort((a, b) => b.issuePct - a.issuePct)
-        .slice(0, 4);
-
-      if (problematicCats.length > 0) {
-        html += "<p><strong>Category‑wise issue hotspots:</strong></p><ul>";
-        problematicCats.forEach(x => {
-          html += `<li>${x.cat}: ${x.issue} issue calls out of ${x.total} (${x.issuePct}% issue rate).</li>`;
+      // Collect sentences from issue feedback
+      const sentenceFreq = {};
+      issueFeedbacks.forEach(fb => {
+        fb.split(/[\.\n]/).forEach(line => {
+          const t = line.trim();
+          if (t.length < 20) return;     // ignore very short bits
+          const key = t.toLowerCase();
+          sentenceFreq[key] = (sentenceFreq[key] || 0) + 1;
         });
-        html += "</ul>";
+      });
+
+      const topSentences = Object.keys(sentenceFreq)
+        .sort((a, b) => sentenceFreq[b] - sentenceFreq[a])
+        .slice(0, 4)
+        .map(t => t.charAt(0).toUpperCase() + t.slice(1));
+
+      // Suggestion generation based on keywords
+      const allText = issueFeedbacks.join(" ").toLowerCase();
+      const suggestions = [];
+
+      suggestions.push(`PRIORITY: Focus on quality – ${issueRate}% calls have issues.`);
+
+      if (allText.includes("pitch")) {
+        suggestions.push("Practice pitch delivery before the call ends so feedback / cross-sell is not missed.");
+      }
+      if (allText.includes("feedback")) {
+        suggestions.push("Ask user’s time and then clearly pitch for feedback so feedback fill rate is not reduced.");
+      }
+      if (allText.includes("roi") || allText.includes("interest") || allText.includes("outstanding amount")) {
+        suggestions.push("Explain clearly how reducing ROI or paying outstanding amount will impact EMI; ensure user fully understands.");
+      }
+      if (suggestions.length === 1) {
+        suggestions.push("Review a few issue calls with the agent and agree on 2–3 clear action points.");
       }
 
-      // tag‑based issues and suggestions
-      const sortedTags = Object.keys(tagCounts)
-        .map(id => {
-          const rule = ISSUE_RULES.find(r => r.id === id);
-          return rule ? { id, label: rule.label, suggestion: rule.suggestion, count: tagCounts[id] } : null;
-        })
-        .filter(x => x)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+      let html = `
+        <div style="margin-top:18px; padding:12px; background:#e8f5e9; border-radius:6px;">
+          <div class="block-title">SUMMARY &amp; SUGGESTIONS</div>
+          <p><strong>OVERALL:</strong> ${goodCount} good calls | ${issueCount} calls with issues.</p>
+      `;
 
-      if (sortedTags.length > 0) {
-        html += "<p><strong>Behaviour‑wise issues from QA notes:</strong></p><ul>";
-        sortedTags.forEach(t => {
-          html += `<li>${t.label}: seen in ${t.count} call(s).</li>`;
-        });
-        html += "</ul>";
-
-        html += "<p><strong>Suggested next steps for this agent:</strong></p><ul>";
-        sortedTags.forEach(t => {
-          html += `<li>${t.suggestion}</li>`;
-        });
-        html += "</ul>";
+      html += `<p class="block-title">TOP ISSUES:</p>`;
+      if (topSentences.length === 0) {
+        html += "<ul><li>No detailed issue feedback available.</li></ul>";
       } else {
-        // fallback – if no rule matched, show generic patterns
-        const freq = {};
-        feedbacks.forEach(fb => {
-          fb.split(/[\.\n]/).forEach(line => {
-            const t = line.trim();
-            if (t.length < 10) return;
-            const key = t.toLowerCase();
-            freq[key] = (freq[key] || 0) + 1;
-          });
+        html += "<ul>";
+        topSentences.forEach(s => {
+          html += `<li>${s}.</li>`;
         });
-        const top = Object.keys(freq)
-          .sort((a, b) => freq[b] - freq[a])
-          .slice(0, 5);
-
-        if (top.length > 0) {
-          html += "<p><strong>Common issue statements seen in QA notes:</strong></p><ul>";
-          top.forEach(t => {
-            const nice = t.charAt(0).toUpperCase() + t.slice(1);
-            html += `<li>${nice}</li>`;
-          });
-          html += "</ul>";
-        }
-        html += "<p><strong>Suggested next step:</strong> review a sample of issue calls in coaching and agree on 2–3 clear action items.</p>";
+        html += "</ul>";
       }
+
+      html += `<p class="block-title">SUGGESTIONS:</p><ul>`;
+      suggestions.forEach((s, i) => {
+        html += `<li>${i + 1}. ${s}</li>`;
+      });
+      html += "</ul></div>";
 
       return html;
     }
