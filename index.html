@@ -214,7 +214,6 @@
       line-height: 1.5;
     }
 
-    /* Dispute dialog overlay */
     #disputeDialog {
       position: fixed;
       inset: 0;
@@ -259,6 +258,7 @@
 
       <section id="summary" class="panel" style="display:none;"></section>
       <section id="calls" class="panel" style="display:none;"></section>
+      <section id="disputesPanel" class="panel" style="display:none;"></section>
     </main>
   </div>
 
@@ -286,8 +286,20 @@
     </div>
   </div>
 
+  <!-- Resolution / clarification popup -->
+  <div id="resolutionDialog" style="position:fixed; inset:0; background:rgba(15,23,42,0.35); display:none; align-items:center; justify-content:center; z-index:9999;">
+    <div style="background:#fff; border-radius:10px; padding:14px 16px; width:360px; max-width:95vw; box-shadow:0 10px 25px rgba(15,23,42,0.35);">
+      <h3 style="margin:0 0 8px; font-size:14px;">Dispute details</h3>
+      <div id="resolutionContent" style="font-size:12px; color:#111827; white-space:pre-wrap;"></div>
+      <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+        <button type="button" onclick="closeResolutionDialog()" style="margin-top:0; padding-inline:12px; background:#1976d2; color:#fff; border:none; border-radius:999px; cursor:pointer;">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Use your real Web App URL here
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
     async function safeJson(res) {
@@ -348,7 +360,7 @@
 
       fetch(url)
         .then(r => safeJson(r))
-        .then(data => {
+        .then(async data => {
           if (!data.ok) {
             status.textContent = "Error: " + (data.error || "Unknown error");
             return;
@@ -356,6 +368,8 @@
 
           renderSummary(data);
           renderCallsGrouped(data.calls);
+
+          await loadDisputes(agent, from, to);
 
           status.textContent = "Done.";
         })
@@ -551,7 +565,6 @@
       dlg.style.display = "none";
     }
 
-    // Form-encoded POST to avoid CORS preflight
     async function submitDisputeFromDialog() {
       const slInput = document.getElementById('dlgSl');
       const descInput = document.getElementById('dlgDesc');
@@ -603,11 +616,100 @@
         statusSpan.textContent = "Dispute submitted. QA will review this SL No.";
         statusSpan.style.color = "#2e7d32";
         closeDisputeDialog();
+
+        if (agent && from && to) {
+          await loadDisputes(agent, from, to);
+        }
       } catch (err) {
         statusSpan.textContent = "Error: " + err.message;
         statusSpan.style.color = "#d32f2f";
         closeDisputeDialog();
       }
+    }
+
+    async function loadDisputes(agent, from, to) {
+      const panel = document.getElementById('disputesPanel');
+      panel.style.display = 'block';
+      panel.innerHTML = "<h2>Disputes</h2><p>Loading disputes...</p>";
+
+      try {
+        const url = `${SCRIPT_URL}?listDisputes=1&agent=${encodeURIComponent(agent)}&from=${from}&to=${to}`;
+        const res = await fetch(url);
+        const data = await safeJson(res);
+
+        if (!data.ok) {
+          panel.innerHTML = "<h2>Disputes</h2><p>Error loading disputes.</p>";
+          return;
+        }
+
+        const list = data.disputes || [];
+        if (list.length === 0) {
+          panel.innerHTML = "<h2>Disputes</h2><p>No disputes for this period.</p>";
+          return;
+        }
+
+        let html = `
+          <h2>Disputes</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>SL No</th>
+                <th>Description</th>
+                <th>Resolution / Clarification</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        list.forEach((d, idx) => {
+          const hasRes = (d.resolution || "").trim().length > 0;
+          const resShort = hasRes
+            ? d.resolution.length > 60 ? d.resolution.slice(0, 60) + "..." : d.resolution
+            : "(Pending)";
+
+          html += `
+            <tr style="cursor:${hasRes ? 'pointer' : 'default'};"
+                ${hasRes ? `onclick="showResolution(${idx})"` : ""}
+                data-index="${idx}">
+              <td>${d.timestamp || ""}</td>
+              <td>${d.slNo || ""}</td>
+              <td>${(d.description || "").replace(/\\n/g, "<br>")}</td>
+              <td>${resShort.replace(/\\n/g, "<br>")}</td>
+            </tr>
+          `;
+        });
+
+        html += "</tbody></table>";
+
+        panel.innerHTML = html;
+        window.__lastDisputes = list;
+      } catch (err) {
+        panel.innerHTML = `<h2>Disputes</h2><p>Error: ${err.message}</p>`;
+      }
+    }
+
+    function showResolution(index) {
+      const list = window.__lastDisputes || [];
+      const item = list[index];
+      if (!item) return;
+
+      const dlg = document.getElementById('resolutionDialog');
+      const content = document.getElementById('resolutionContent');
+
+      const resText = item.resolution && item.resolution.trim().length
+        ? item.resolution
+        : "No resolution/clarification recorded yet.";
+
+      content.textContent =
+        `Agent: ${item.agent}\nSL No: ${item.slNo}\nTime: ${item.timestamp}\n\nDescription:\n${item.description}\n\nResolution / Clarification:\n${resText}`;
+
+      dlg.style.display = "flex";
+    }
+
+    function closeResolutionDialog() {
+      const dlg = document.getElementById('resolutionDialog');
+      dlg.style.display = "none";
     }
 
     window.addEventListener('load', init);
