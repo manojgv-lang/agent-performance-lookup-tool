@@ -1,359 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Volt Agent QA</title>
+  <meta charset="UTF-8" />
+  <title>Agent Performance Lookup Tool</title>
   <style>
-    /* Global layout */
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:#020617;
-      margin:0;
-      padding:0;
-      color:#0f172a;
-    }
-    header {
-      background:#020617;
-      color:#e5e7eb;
-      padding:10px 20px;
-      border-bottom:1px solid #111827;
-    }
-    header .wrap {
-      max-width:1100px;
-      margin:0 auto;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .app-name {
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-    .app-logo {
-      width:26px;
-      height:26px;
-      border-radius:8px;
-      background:linear-gradient(135deg,#4f46e5,#22c55e);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:14px;
-      font-weight:700;
-      color:white;
-    }
-    .app-title {
-      font-size:18px;
-      font-weight:650;
-    }
-    .app-subtitle {
-      font-size:11px;
-      opacity:0.8;
-    }
-
-    .page {
-      padding:24px 12px 32px;
-    }
-    .container {
-      max-width:1100px;
-      margin:0 auto;
-    }
-
-    /* Layout: form + results */
-    .layout {
-      display:grid;
-      grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-      gap:20px;
-    }
-    @media (max-width: 900px) {
-      .layout {
-        grid-template-columns: minmax(0,1fr);
-      }
-    }
-
-    /* Cards & typography */
-    .card {
-      background:#020617;
-      border-radius:18px;
-      padding:18px 20px;
-      box-shadow:0 18px 45px rgba(15,23,42,0.8);
-      border:1px solid #1f2937;
-    }
-    .card-light {
-      background:#020617;
-      border-radius:18px;
-      padding:18px 20px;
-      box-shadow:0 18px 45px rgba(15,23,42,0.8);
-      border:1px solid #1e293b;
-    }
-    h1 {
-      margin:0 0 16px 0;
-      font-size:22px;
-      font-weight:650;
-      color:#e5e7eb;
-    }
-    .section-title {
-      font-size:14px;
-      font-weight:600;
-      color:#e5e7eb;
-      margin-bottom:10px;
-      display:flex;
-      align-items:center;
-      gap:6px;
-    }
-    .section-title span.icon {
-      width:18px;
-      height:18px;
-      border-radius:999px;
-      background:#4f46e5;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:11px;
-      color:white;
-    }
-
-    label {
-      display:block;
-      margin-top:10px;
-      margin-bottom:4px;
-      font-weight:500;
-      font-size:12px;
-      color:#cbd5f5;
-    }
-    select,
-    input[type="text"] {
-      width:100%;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid #475569;
-      box-sizing:border-box;
-      font-size:13px;
-      background:#020617;
-      color:#e5e7eb;
-    }
-    select:focus,
-    input[type="text"]:focus {
-      outline:none;
-      border-color:#6366f1;
-      box-shadow:0 0 0 1px #6366f177;
-    }
-    button {
-      margin-top:16px;
-      width:100%;
-      padding:10px 16px;
-      border:none;
-      border-radius:999px;
-      background:linear-gradient(135deg,#6366f1,#22c55e);
-      color:white;
-      font-size:14px;
-      font-weight:600;
-      cursor:pointer;
-      box-shadow:0 8px 22px rgba(79,70,229,0.6);
-      transition:transform 0.1s, box-shadow 0.15s, filter 0.15s;
-    }
-    button:hover:not(:disabled) {
-      transform:translateY(-1px);
-      box-shadow:0 12px 30px rgba(79,70,229,0.7);
-      filter:brightness(1.03);
-    }
-    button:active:not(:disabled) {
-      transform:translateY(0);
-      box-shadow:0 6px 16px rgba(79,70,229,0.5);
-    }
-    button:disabled {
-      background:#4b5563;
-      box-shadow:none;
-      cursor:not-allowed;
-      filter:none;
-    }
-    #status {
-      margin-top:8px;
-      font-size:11px;
-      color:#9ca3af;
-    }
-
-    .hint {
-      margin-top:10px;
-      font-size:11px;
-      color:#9ca3af;
-      line-height:1.4;
-    }
-
-    #summary h2,
-    #calls h2 {
-      margin-top:0;
-      font-size:16px;
-      margin-bottom:10px;
-      color:#e5e7eb;
-    }
-
-    table {
-      border-collapse:collapse;
-      width:100%;
-      font-size:12px;
-      color:#e5e7eb;
-    }
-    th, td {
-      padding:6px 8px;
-      border:1px solid #1e293b;
-      vertical-align:top;
-    }
-    th {
-      background:#020617;
-      text-align:left;
-      font-weight:600;
-      color:#a5b4fc;
-    }
-    tr:nth-child(even) td {
-      background:#020617;
-    }
-
-    .summary-table td:first-child {
-      width:110px;
-      font-weight:500;
-      color:#9ca3af;
-      background:#020617;
-    }
-
-    .category-header {
-      margin-top:14px;
-      padding:6px 10px;
-      border-radius:10px 10px 0 0;
-      background:linear-gradient(90deg,#4f46e5,#06b6d4);
-      color:white;
-      font-size:12px;
-      font-weight:600;
-    }
-    .good-row {
-      background:#022c22;
-    }
-    .issue-row {
-      background:#451a1a;
-    }
-    .summary-box {
-      white-space:pre-wrap;
-      font-size:12px;
-      background:#020617;
-      border-radius:12px;
-      padding:10px 12px;
-      border:1px dashed #1e293b;
-      color:#e5e7eb;
-      line-height:1.5;
-    }
-    .badge-chip {
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      font-size:11px;
-      color:#9ca3af;
-      margin-top:4px;
-    }
-    .badge-dot {
-      width:8px;
-      height:8px;
-      border-radius:999px;
-      background:#22c55e;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { background: #4CAF50; color: white; padding: 10px 15px; }
+    .card { background: white; padding: 15px; margin-top: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 8px; }
+    input, select { padding: 6px; margin-top: 4px; }
+    button { margin-top: 12px; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;}
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
+    th { background: #E1BEE7; }
+    .good { background: #E8F5E9; }
+    .issue { background: #FFEBEE; }
+    #status { margin-top: 10px; color: #555; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <div class="app-name">
-        <div class="app-logo">V</div>
-        <div>
-          <div class="app-title">Volt Agent QA</div>
-          <div class="app-subtitle">Daily QA performance in one view</div>
-        </div>
-      </div>
-      <div class="badge-chip">
-        <span class="badge-dot"></span>
-        Live dashboard
-      </div>
-    </div>
-  </header>
+  <h1>🎯 Agent Performance Lookup Tool</h1>
 
-  <div class="page">
-    <div class="container">
-      <div class="layout">
-        <!-- Left: Filters -->
-        <div class="card">
-          <div class="section-title">
-            <span class="icon">⚙</span>
-            Filters
-          </div>
+  <div class="card">
+    <label>Agent Name</label>
+    <input id="agent" placeholder="Exact agent name as in sheet" />
 
-          <label for="agent">Agent</label>
-          <select id="agent">
-            <option value="">Loading...</option>
-          </select>
+    <label>From Date (yyyy-mm-dd)</label>
+    <input id="from" type="date" />
 
-          <label for="from">From Date (yyyy-mm-dd)</label>
-          <input id="from" type="text" placeholder="2026-05-01">
+    <label>To Date (yyyy-mm-dd)</label>
+    <input id="to" type="date" />
 
-          <label for="to">To Date (yyyy-mm-dd)</label>
-          <input id="to" type="text" placeholder="2026-05-31">
-
-          <button id="runBtn" onclick="runReport()">Generate Report</button>
-          <div id="status">Waiting...</div>
-
-          <div class="hint">
-            Tip: Use this page in full screen (F11) for a more app-like experience. Idle calls are ignored automatically.
-          </div>
-        </div>
-
-        <!-- Right: Results -->
-        <div>
-          <div id="summary" class="card-light" style="display:none;"></div>
-          <div id="calls" class="card-light" style="display:none;"></div>
-        </div>
-      </div>
-    </div>
+    <button id="runBtn" onclick="runReport()">Generate Report</button>
+    <div id="status"></div>
   </div>
 
+  <div id="summary" class="card" style="display:none;"></div>
+  <div id="calls" class="card" style="display:none;"></div>
+
   <script>
+    // Use YOUR working Apps Script URL here
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
-
-    async function init() {
-      const agentSelect = document.getElementById('agent');
-      const status = document.getElementById('status');
-
-      status.textContent = "Loading agents...";
-
-      try {
-        const res = await fetch(`${SCRIPT_URL}?listAgents=1`);
-        const data = await res.json();
-
-        if (!data.ok) {
-          status.textContent = "Error loading agents: " + (data.error || "Unknown error");
-          return;
-        }
-
-        agentSelect.innerHTML = '<option value="">Select agent...</option>';
-
-        data.agents.forEach(name => {
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          agentSelect.appendChild(opt);
-        });
-
-        status.textContent = "Agents loaded. Select agent and dates, then Generate Report.";
-      } catch (err) {
-        status.textContent = "Failed to load agents: " + err.message;
-      }
-    }
 
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
       const from  = document.getElementById('from').value;
       const to    = document.getElementById('to').value;
       const status = document.getElementById('status');
-      const btn    = document.getElementById('runBtn');
+      const btn = document.getElementById('runBtn');
 
       if (!agent || !from || !to) {
-        status.textContent = "Please select Agent, From and To dates.";
+        status.textContent = "Please fill Agent, From and To dates.";
         return;
       }
 
@@ -367,191 +65,72 @@
         .then(data => {
           if (!data.ok) {
             status.textContent = "Error: " + (data.error || "Unknown error");
+            btn.disabled = false;
             return;
           }
 
           renderSummary(data);
-          renderCallsGrouped(data.calls);
-
+          renderCalls(data.calls);
           status.textContent = "Done.";
+          btn.disabled = false;
         })
         .catch(err => {
-          status.textContent = "Failed: " + err.message;
-        })
-        .finally(() => {
+          status.textContent = "Error: " + err.message;
           btn.disabled = false;
         });
     }
 
     function renderSummary(data) {
-      const summaryDiv = document.getElementById('summary');
-      summaryDiv.style.display = 'block';
-
-      summaryDiv.innerHTML = `
-        <div class="section-title">
-          <span class="icon">📊</span>
-          Performance summary
-        </div>
-        <table class="summary-table">
-          <tr>
-            <td>Agent</td>
-            <td>${data.agent}</td>
-          </tr>
-          <tr>
-            <td>Total audits</td>
-            <td>${data.totalAudits}</td>
-          </tr>
-          <tr>
-            <td>Average score</td>
-            <td>${data.averageScore}%</td>
-          </tr>
-          <tr>
-            <td>Period</td>
-            <td>${data.period}</td>
-          </tr>
-        </table>
+      const div = document.getElementById('summary');
+      div.style.display = 'block';
+      div.innerHTML = `
+        <h2>📊 Performance Summary</h2>
+        <p><strong>Agent:</strong> ${data.agent}</p>
+        <p><strong>Total Audits:</strong> ${data.totalAudits}</p>
+        <p><strong>Average Score:</strong> ${data.averageScore}%</p>
+        <p><strong>Period:</strong> ${data.period}</p>
       `;
     }
 
-    function renderCallsGrouped(calls) {
-      const callsDiv = document.getElementById('calls');
-      callsDiv.style.display = 'block';
-
-      // Remove Idle call rows
-      calls = (calls || []).filter(c => {
-        const q = (c.queryType || "").toLowerCase();
-        return q !== "idle call";
-      });
+    function renderCalls(calls) {
+      const div = document.getElementById('calls');
+      div.style.display = 'block';
 
       if (!calls || calls.length === 0) {
-        callsDiv.innerHTML = `
-          <div class="section-title">
-            <span class="icon">📋</span>
-            Call-by-call breakdown
-          </div>
-          <p style="font-size:12px;color:#9ca3af;">No calls in this period (excluding idle calls).</p>
-        `;
+        div.innerHTML = "<p>No calls in this period.</p>";
         return;
       }
 
-      const groups = {};
-      let totalGood = 0;
-      let totalIssues = 0;
-      const allIssueTexts = [];
+      let html = `
+        <h2>📋 Call-by-Call Breakdown</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>SL No</th>
+              <th>Call Date</th>
+              <th>Issue Type</th>
+              <th>Score</th>
+              <th>Feedback</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
 
       calls.forEach(c => {
-        const category = c.queryType || "Other";
-        if (!groups[category]) groups[category] = [];
-        groups[category].push(c);
-      });
-
-      let html = `
-        <div class="section-title">
-          <span class="icon">📋</span>
-          Call-by-call breakdown
-        </div>
-      `;
-
-      Object.keys(groups).forEach(cat => {
-        const list = groups[cat];
-        html += `<div class="category-header">${cat.toUpperCase()} (${list.length} calls)</div>`;
         html += `
-          <table>
-            <thead>
-              <tr>
-                <th>SL No</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Feedback</th>
-              </tr>
-            </thead>
-            <tbody>
+          <tr>
+            <td>${c.slNo || ""}</td>
+            <td>${c.callDate || ""}</td>
+            <td>${c.queryType || ""}</td>
+            <td>${c.score != null ? c.score + "%" : ""}</td>
+            <td>${(c.feedback || "").replace(/\n/g, "<br>")}</td>
+          </tr>
         `;
-
-        list.forEach(c => {
-          const score = typeof c.score === "number" ? c.score : parseFloat(c.score || "0");
-          let statusText = "";
-          let rowClass = "";
-          if (!isNaN(score) && score >= 90) {
-            statusText = "Good";
-            rowClass = "good-row";
-            totalGood++;
-          } else {
-            statusText = "Issues";
-            rowClass = "issue-row";
-            totalIssues++;
-            if (c.feedback) {
-              allIssueTexts.push(c.feedback);
-            }
-          }
-
-          html += `
-            <tr class="${rowClass}">
-              <td style="text-align:center;">${c.slNo}</td>
-              <td>${c.queryType || ""}</td>
-              <td style="text-align:center;">${statusText}</td>
-              <td>${(c.feedback || "").replace(/\\n/g, "<br>")}</td>
-            </tr>
-          `;
-        });
-
-        html += "</tbody></table>";
       });
 
-      const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
-
-      html += `
-        <h2 style="margin-top:18px;">Summary &amp; suggestions</h2>
-        <div class="summary-box">${issueSummary}</div>
-      `;
-
-      callsDiv.innerHTML = html;
+      html += "</tbody></table>";
+      div.innerHTML = html;
     }
-
-    function buildSuggestions(totalGood, totalIssues, issues) {
-      let text = "";
-      text += `Overall: ${totalGood} good calls | ${totalIssues} calls with issues\n\n`;
-
-      if (issues.length > 0) {
-        text += "Top issue themes:\n";
-        const freq = {};
-        issues.forEach(t => {
-          const key = t.toLowerCase();
-          freq[key] = (freq[key] || 0) + 1;
-        });
-        const top = Object.keys(freq).sort((a,b) => freq[b]-freq[a]).slice(0,3);
-        top.forEach(i => {
-          const clean = i.charAt(0).toUpperCase() + i.slice(1);
-          text += `  • ${clean}\n`;
-        });
-        text += "\n";
-      }
-
-      text += "Next steps for this agent:\n";
-      const total = totalGood + totalIssues;
-      const issueRate = total ? totalIssues / total : 0;
-
-      let count = 1;
-      if (issueRate > 0.5) {
-        text += `  ${count++}. Focus coaching on high-risk call types (over ${Math.round(issueRate*100)}% of calls have issues).\n`;
-      }
-      const allIssueText = issues.join(" ").toLowerCase();
-      if (allIssueText.includes("pitch")) {
-        text += `  ${count++}. Practice pitch delivery and ensure all mandatory points are covered.\n`;
-      }
-      if (allIssueText.includes("procedure") || allIssueText.includes("process")) {
-        text += `  ${count++}. Review SOPs and quick-reference guides for these queries.\n`;
-      }
-      if (allIssueText.includes("empathetic") || allIssueText.includes("tone")) {
-        text += `  ${count++}. Run a short session on empathy, tone, and active listening.\n`;
-      }
-      if (count === 1) {
-        text += "  • No critical patterns found. Maintain current performance.\n";
-      }
-      return text;
-    }
-
-    window.addEventListener('load', init);
   </script>
 </body>
 </html>
