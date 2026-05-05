@@ -1,120 +1,259 @@
+Here is a complete `index.html` with the upgraded look and your existing logic kept intact. You can replace your current file with this.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Agent QA Report</title>
   <style>
+    :root {
+      --bg: #f5f7fb;
+      --border: #e1e5f2;
+      --primary: #1976d2;
+      --primary-dark: #1458a1;
+      --accent: #4caf50;
+      --radius-lg: 14px;
+      --radius-sm: 8px;
+      --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background:#f5f5f5;
-      margin:0;
-      padding:20px;
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top left, #e3f2fd 0, #f5f7fb 55%, #edf1ff 100%);
+      color: #1f2933;
     }
-    h1 {
-      text-align:center;
-      margin-bottom:20px;
+
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
     }
-    .container {
-      max-width:1100px;
-      margin:0 auto;
+
+    .topbar {
+      background: linear-gradient(135deg, #1976d2, #673ab7);
+      color: #fff;
+      border-radius: 18px;
+      padding: 16px 22px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 18px;
     }
-    .card {
-      background:#fff;
-      border-radius:6px;
-      padding:16px 20px;
-      margin-bottom:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+
+    .topbar-title {
+      font-size: 22px;
+      font-weight: 700;
     }
+
+    .topbar-sub {
+      font-size: 13px;
+      margin-top: 4px;
+      opacity: 0.9;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      padding: 16px 18px 18px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid #edf0f6;
+    }
+
+    .panel-filters {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-title {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
     label {
-      display:block;
-      margin-top:8px;
-      margin-bottom:4px;
-      font-weight:bold;
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #425466;
     }
-    select, input[type="date"] {
-      width:100%;
-      padding:8px;
-      border-radius:4px;
-      border:1px solid #ccc;
-      box-sizing:border-box;
+
+    select,
+    input[type="date"] {
+      width: 100%;
+      padding: 8px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #cbd2e1;
+      background: #f9fafb;
+      font-size: 13px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     }
+
+    select:focus,
+    input[type="date"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.18);
+    }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .date-row { grid-template-columns: 1fr; }
+    }
+
     button {
-      margin-top:16px;
-      padding:10px 16px;
-      border:none;
-      border-radius:4px;
-      background:#1976d2;
-      color:white;
-      font-size:14px;
-      cursor:pointer;
+      margin-top: 14px;
+      padding: 9px 16px;
+      border: none;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.25);
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
     }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(25, 118, 210, 0.3);
+    }
+
     button:disabled {
-      background:#90a4ae;
-      cursor:not-allowed;
+      background: #b7c5d8;
+      cursor: not-allowed;
+      box-shadow: none;
     }
+
     #status {
-      margin-top:8px;
-      font-size:13px;
-      color:#333;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #5f6c80;
     }
+
     #summary h2,
     #calls h2 {
-      margin-top:0;
+      margin-top: 0;
+      font-size: 15px;
+      font-weight: 700;
     }
+
     table {
-      border-collapse:collapse;
-      width:100%;
-      font-size:13px;
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+      margin-top: 8px;
     }
-    th, td {
-      padding:4px 8px;
-      border:1px solid #ddd;
-      vertical-align:top;
+
+    th,
+    td {
+      padding: 5px 7px;
+      border: 1px solid var(--border);
+      vertical-align: top;
     }
+
     th {
-      background:#f3e5f5;
-      text-align:left;
+      background: #f3e5f5;
+      text-align: left;
+      font-weight: 600;
+      color: #45275b;
     }
+
     .category-header {
-      background:#f3e5f5;
-      font-weight:bold;
-      padding:6px 8px;
-      margin-top:8px;
+      background: #f3e5f5;
+      font-weight: 600;
+      padding: 6px 8px;
+      margin-top: 12px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
     }
+
+    .category-header span.count {
+      font-weight: 500;
+      color: #5f6c80;
+    }
+
     .good-row {
-      background:#e8f5e9;
+      background: #f5fbf6;
     }
+
     .issue-row {
-      background:#ffebee;
+      background: #fff7f7;
     }
+
     .summary-box {
-      white-space:pre-wrap;
-      font-size:13px;
+      white-space: pre-wrap;
+      font-size: 13px;
+      background: #f1f8e9;
+      border-radius: 8px;
+      padding: 10px 12px;
+      border-left: 4px solid var(--accent);
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Agent QA Report</h1>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-title">Agent QA Report</div>
+      <div class="topbar-sub">Filter any agent and generate QA insights in one click.</div>
+    </header>
 
-    <div class="card">
-      <label for="agent">Agent</label>
-      <select id="agent">
-        <option value="">Loading...</option>
-      </select>
+    <main class="main">
+      <section class="panel panel-filters">
+        <h2 class="panel-title">Filters</h2>
 
-      <label for="from">From Date (yyyy-mm-dd)</label>
-      <input id="from" type="date">
+        <label for="agent">Agent</label>
+        <select id="agent">
+          <option value="">Loading...</option>
+        </select>
 
-      <label for="to">To Date (yyyy-mm-dd)</label>
-      <input id="to" type="date">
+        <div class="date-row">
+          <div>
+            <label for="from">From Date</label>
+            <input id="from" type="date">
+          </div>
+          <div>
+            <label for="to">To Date</label>
+            <input id="to" type="date">
+          </div>
+        </div>
 
-      <button id="runBtn" onclick="runReport()">Generate Report</button>
-      <div id="status">Waiting...</div>
-    </div>
+        <button id="runBtn" onclick="runReport()">🔍 Generate Report</button>
+        <div id="status">Waiting...</div>
+      </section>
 
-    <div id="summary" class="card" style="display:none;"></div>
-    <div id="calls" class="card" style="display:none;"></div>
+      <section id="summary" class="panel" style="display:none;"></section>
+      <section id="calls" class="panel" style="display:none;"></section>
+    </main>
   </div>
 
   <script>
@@ -135,16 +274,16 @@
           return;
         }
 
-        agentSelect.innerHTML = '<option value="">-- Select Agent --</option>';
+        agentSelect.innerHTML = '<option value="">Select agent…</option>';
 
-        data.agents.forEach(name => {
+        (data.agents || []).forEach(name => {
           const opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
           agentSelect.appendChild(opt);
         });
 
-        status.textContent = "Agents loaded. Select agent and dates, then Generate Report.";
+        status.textContent = "Agents loaded. Pick agent and dates, then Generate report.";
       } catch (err) {
         status.textContent = "Failed to load agents: " + err.message;
       }
@@ -196,7 +335,7 @@
         <h2>Performance Summary</h2>
         <table>
           <tr>
-            <td style="font-weight:bold;">Agent</td>
+            <td style="font-weight:bold; width:130px;">Agent</td>
             <td>${data.agent}</td>
           </tr>
           <tr>
@@ -215,12 +354,10 @@
       `;
     }
 
-    // Call-by-call breakdown with Idle call removed
     function renderCallsGrouped(calls) {
       const callsDiv = document.getElementById('calls');
       callsDiv.style.display = 'block';
 
-      // Remove Idle call rows
       calls = (calls || []).filter(c => {
         const q = (c.queryType || "").toLowerCase();
         return q !== "idle call";
@@ -246,8 +383,11 @@
 
       Object.keys(groups).forEach(cat => {
         const list = groups[cat];
-        html += `<div class="category-header">${cat.toUpperCase()} (${list.length} calls)</div>`;
         html += `
+          <div class="category-header">
+            <span>${cat.toUpperCase()}</span>
+            <span class="count">${list.length} calls</span>
+          </div>
           <table>
             <thead>
               <tr>
@@ -282,7 +422,7 @@
               <td style="text-align:center;">${c.slNo}</td>
               <td>${c.queryType || ""}</td>
               <td style="text-align:center;">${statusText}</td>
-              <td>${(c.feedback || "").replace(/\n/g, "<br>")}</td>
+              <td>${(c.feedback || "").replace(/\\n/g, "<br>")}</td>
             </tr>
           `;
         });
@@ -293,7 +433,7 @@
       const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
 
       html += `
-        <h2>Summary & Suggestions</h2>
+        <h2 style="margin-top:18px;">Summary & Suggestions</h2>
         <div class="summary-box">${issueSummary}</div>
       `;
 
@@ -347,3 +487,4 @@
   </script>
 </body>
 </html>
+```
