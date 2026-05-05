@@ -16,9 +16,7 @@
       --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -88,7 +86,9 @@
     }
 
     select,
-    input[type="date"] {
+    input[type="date"],
+    textarea,
+    input[type="text"] {
       width: 100%;
       padding: 8px 9px;
       border-radius: var(--radius-sm);
@@ -99,11 +99,18 @@
     }
 
     select:focus,
-    input[type="date"]:focus {
+    input[type="date"]:focus,
+    textarea:focus,
+    input[type="text"]:focus {
       outline: none;
       border-color: var(--primary);
       background: #ffffff;
       box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.18);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 48px;
     }
 
     .date-row {
@@ -254,7 +261,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
+    const SCRIPT_URL = "YOUR_WEB_APP_URL_HERE"; // replace with your /exec URL
 
     async function init() {
       const agentSelect = document.getElementById('agent');
@@ -432,6 +439,27 @@
       html += `
         <h2 style="margin-top:18px;">Summary & Suggestions</h2>
         <div class="summary-box">${issueSummary}</div>
+
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e1e5f2;">
+          <h3 style="margin:0 0 6px; font-size:14px;">Raise a dispute</h3>
+          <p style="font-size:12px; margin:0 0 8px;">
+            If you want to dispute any audit, enter the SL No and short description. This will be sent to QA.
+          </p>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start;">
+            <div style="flex:0 0 120px;">
+              <label style="margin-top:0; font-size:12px;">SL No</label>
+              <input id="disputeSl" type="text" style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px;">
+            </div>
+            <div style="flex:1 1 auto; min-width:180px;">
+              <label style="margin-top:0; font-size:12px;">Dispute description</label>
+              <textarea id="disputeDesc" rows="2" style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px;"></textarea>
+            </div>
+            <div style="flex:0 0 auto; display:flex; flex-direction:column; gap:4px; margin-top:16px;">
+              <button type="button" onclick="submitDispute()" style="margin-top:0; padding-inline:12px;">🚩 Submit dispute</button>
+              <span id="disputeStatus" style="font-size:11px; color:#5f6c80;"></span>
+            </div>
+          </div>
+        </div>
       `;
 
       callsDiv.innerHTML = html;
@@ -480,8 +508,59 @@
       return text;
     }
 
+    async function submitDispute() {
+      const slInput = document.getElementById('disputeSl');
+      const descInput = document.getElementById('disputeDesc');
+      const statusSpan = document.getElementById('disputeStatus');
+
+      const slNo = (slInput.value || "").trim();
+      const description = (descInput.value || "").trim();
+
+      const agent = (document.getElementById('agent').value || "").trim();
+      const from = document.getElementById('from').value;
+      const to = document.getElementById('to').value;
+
+      if (!slNo || !description) {
+        statusSpan.textContent = "Please enter SL No and description.";
+        statusSpan.style.color = "#d32f2f";
+        return;
+      }
+
+      statusSpan.textContent = "Submitting dispute...";
+      statusSpan.style.color = "#5f6c80";
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "dispute",
+            agent,
+            slNo,
+            description,
+            from,
+            to
+          })
+        });
+
+        const data = await res.json();
+        if (!data.ok) {
+          statusSpan.textContent = "Error: " + (data.error || "Could not save dispute");
+          statusSpan.style.color = "#d32f2f";
+          return;
+        }
+
+        statusSpan.textContent = "Dispute submitted. QA will review this SL No.";
+        statusSpan.style.color = "#2e7d32";
+        slInput.value = "";
+        descInput.value = "";
+      } catch (err) {
+        statusSpan.textContent = "Error: " + err.message;
+        statusSpan.style.color = "#d32f2f";
+      }
+    }
+
     window.addEventListener('load', init);
   </script>
 </body>
 </html>
-```
