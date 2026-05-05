@@ -122,7 +122,7 @@
       color:#cbd5f5;
     }
     select,
-    input[type="date"] {
+    input[type="text"] {
       width:100%;
       padding:8px 10px;
       border-radius:10px;
@@ -133,7 +133,7 @@
       color:#e5e7eb;
     }
     select:focus,
-    input[type="date"]:focus {
+    input[type="text"]:focus {
       outline:none;
       border-color:#6366f1;
       box-shadow:0 0 0 1px #6366f177;
@@ -173,7 +173,6 @@
       color:#9ca3af;
     }
 
-    /* Hints */
     .hint {
       margin-top:10px;
       font-size:11px;
@@ -181,7 +180,6 @@
       line-height:1.4;
     }
 
-    /* Results area */
     #summary h2,
     #calls h2 {
       margin-top:0;
@@ -292,10 +290,10 @@
           </select>
 
           <label for="from">From Date (yyyy-mm-dd)</label>
-          <input id="from" type="date" value="2026-05-01">
+          <input id="from" type="text" placeholder="2026-05-01">
 
           <label for="to">To Date (yyyy-mm-dd)</label>
-          <input id="to" type="date" value="2026-05-31">
+          <input id="to" type="text" placeholder="2026-05-31">
 
           <button id="runBtn" onclick="runReport()">Generate Report</button>
           <div id="status">Waiting...</div>
