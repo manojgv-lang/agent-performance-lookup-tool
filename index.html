@@ -13,7 +13,7 @@
       justify-content: center;
     }
     .wrap {
-      max-width: 900px;
+      max-width: 1000px;
       width: 100%;
     }
     h1 {
@@ -79,6 +79,15 @@
     #status {
       margin-top: 10px;
       color: #555;
+      font-size: 13px;
+    }
+    .summary-text h3 {
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+    .summary-text ul {
+      margin: 4px 0 0 18px;
+      padding: 0;
       font-size: 13px;
     }
   </style>
@@ -207,25 +216,66 @@
       const goodFeedbacks = [];
       const issueFeedbacks = [];
 
+      // category summary: { category: {good, issue, total} }
+      const categoryStats = {};
+
       calls.forEach(c => {
         const scoreNum = typeof c.score === "number"
           ? c.score
           : parseFloat(c.score || "0");
+        const category = c.queryType || "Other";
 
-        if (!isNaN(scoreNum) && scoreNum >= 90) {
+        if (!categoryStats[category]) {
+          categoryStats[category] = { good: 0, issue: 0, total: 0 };
+        }
+
+        const isGood = !isNaN(scoreNum) && scoreNum >= 90;
+
+        if (isGood) {
           goodCalls.push(c);
+          categoryStats[category].good++;
           if (c.feedback) goodFeedbacks.push(c.feedback);
         } else {
           issueCalls.push(c);
+          categoryStats[category].issue++;
           if (c.feedback) issueFeedbacks.push(c.feedback);
         }
+        categoryStats[category].total++;
       });
 
       let html = "<h2>📋 Call Breakdown</h2>";
 
+      // Category summary table
+      html += `
+        <h3>📂 Category-wise summary</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue Type</th>
+              <th>Good calls</th>
+              <th>Calls with issues</th>
+              <th>Issue %</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      Object.keys(categoryStats).forEach(cat => {
+        const s = categoryStats[cat];
+        const issuePct = s.total ? Math.round((s.issue / s.total) * 100) : 0;
+        html += `
+          <tr>
+            <td>${cat}</td>
+            <td>${s.good}</td>
+            <td>${s.issue}</td>
+            <td>${issuePct}%</td>
+          </tr>
+        `;
+      });
+      html += "</tbody></table>";
+
       // Good calls table
       html += `
-        <h3>✅ Good calls (${goodCalls.length})</h3>
+        <h3 style="margin-top:16px;">✅ Good calls (${goodCalls.length})</h3>
       `;
       if (goodCalls.length === 0) {
         html += "<p>No good calls in this period.</p>";
@@ -244,16 +294,16 @@
       }
 
       // Insights text
-      const strengthsText = buildStrengthsText(goodCalls.length, goodFeedbacks);
-      const issuesText = buildIssuesText(issueCalls.length, issueFeedbacks, calls.length);
+      const strengthsText = buildStrengthsText(goodCalls.length, goodFeedbacks, categoryStats);
+      const issuesTextHTML = buildIssuesAndSuggestions(issueCalls.length, issueFeedbacks, calls.length, categoryStats);
 
       html += `
-        <div style="margin-top:16px; font-size:13px;">
+        <div class="summary-text" style="margin-top:16px; font-size:13px;">
           <h3>🟢 Key strengths summary</h3>
           <p>${strengthsText}</p>
 
           <h3>🔴 Major issues & suggestions</h3>
-          <p>${issuesText}</p>
+          ${issuesTextHTML}
         </div>
       `;
 
@@ -291,52 +341,84 @@
       return html;
     }
 
-    function buildStrengthsText(goodCount, feedbacks) {
+    function buildStrengthsText(goodCount, feedbacks, categoryStats) {
       if (goodCount === 0) {
         return "No high-scoring calls in this period.";
       }
 
+      // find top categories by good calls
+      const catList = Object.keys(categoryStats)
+        .map(cat => ({ cat, good: categoryStats[cat].good }))
+        .filter(x => x.good > 0)
+        .sort((a, b) => b.good - a.good)
+        .slice(0, 3);
+
       let text = `Agent has ${goodCount} calls with score ≥ 90%. `;
+
+      if (catList.length > 0) {
+        const catNames = catList.map(c => `${c.cat} (${c.good})`).join(", ");
+        text += `Strong performance is seen mainly in: ${catNames}. `;
+      }
 
       const joined = feedbacks.join(" ").toLowerCase();
       const positives = [];
       if (joined.includes("empathy") || joined.includes("empathetic") || joined.includes("polite")) {
-        positives.push("strong empathy and polite tone");
+        positives.push("consistently good empathy and polite tone");
       }
       if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
-        positives.push("good adherence to process/SOP");
+        positives.push("good adherence to process/SOP on most calls");
       }
       if (joined.includes("pitch") || joined.includes("sales")) {
-        positives.push("effective pitch / sales conversation");
+        positives.push("effective product / service pitching");
       }
       if (joined.includes("probing")) {
-        positives.push("good probing questions to understand the query");
+        positives.push("good probing questions to understand customer need");
       }
       if (joined.includes("communication") || joined.includes("clear")) {
-        positives.push("clear communication with the customer");
+        positives.push("clear and structured communication");
       }
 
       if (positives.length > 0) {
-        text += "Key strengths observed: " + positives.join(", ") + ".";
+        text += "Behaviour-wise strengths: " + positives.join(", ") + ".";
       } else {
-        text += "Strong calls show overall good query handling, compliance and customer experience.";
+        text += "Good calls show overall strong query handling and compliance.";
       }
       return text;
     }
 
-    function buildIssuesText(issueCount, feedbacks, totalCalls) {
+    function buildIssuesAndSuggestions(issueCount, feedbacks, totalCalls, categoryStats) {
       if (issueCount === 0) {
-        return "No major issues found in this period.";
+        return "<p>No major issues found in this period.</p>";
       }
 
       const issueRate = totalCalls ? Math.round((issueCount / totalCalls) * 100) : 0;
-      let text = `There are ${issueCount} calls with issues, which is about ${issueRate}% of total evaluated calls. `;
+      let html = `<p>There are ${issueCount} calls with issues (about ${issueRate}% of total evaluated calls).</p>`;
 
+      // category-wise high-issue categories
+      const problematicCats = Object.keys(categoryStats)
+        .map(cat => {
+          const s = categoryStats[cat];
+          const issuePct = s.total ? Math.round((s.issue / s.total) * 100) : 0;
+          return { cat, issue: s.issue, total: s.total, issuePct };
+        })
+        .filter(x => x.issue > 0)
+        .sort((a, b) => b.issuePct - a.issuePct)
+        .slice(0, 4);
+
+      if (problematicCats.length > 0) {
+        html += "<p><strong>Category-wise issue hotspots:</strong></p><ul>";
+        problematicCats.forEach(x => {
+          html += `<li>${x.cat}: ${x.issue} issue calls out of ${x.total} (${x.issuePct}% issue rate).</li>`;
+        });
+        html += "</ul>";
+      }
+
+      // recurring text patterns
       const freq = {};
       feedbacks.forEach(fb => {
         fb.split(/[\.\n]/).forEach(line => {
           const t = line.trim();
-          if (t.length < 5) return;
+          if (t.length < 10) return;
           const key = t.toLowerCase();
           freq[key] = (freq[key] || 0) + 1;
         });
@@ -344,39 +426,51 @@
 
       const top = Object.keys(freq)
         .sort((a, b) => freq[b] - freq[a])
-        .slice(0, 3);
+        .slice(0, 5);
 
       if (top.length > 0) {
-        text += "Top recurring issue points: ";
-        text += top
-          .map(t => t.charAt(0).toUpperCase() + t.slice(1))
-          .join("; ");
-        text += ". ";
+        html += "<p><strong>Common issue statements seen in QA notes:</strong></p><ul>";
+        top.forEach(t => {
+          const nice = t.charAt(0).toUpperCase() + t.slice(1);
+          html += `<li>${nice}</li>`;
+        });
+        html += "</ul>";
       }
 
-      // Simple suggestion bullets based on keywords
+      // Behaviour-based suggestions
       const allText = feedbacks.join(" ").toLowerCase();
       const suggestions = [];
-      if (allText.includes("pitch")) {
-        suggestions.push("Refresh pitch guidelines and run a short mock-call practice on complete pitching.");
+
+      if (allText.includes("missed pitch") || allText.includes("pitch points")) {
+        suggestions.push("Run targeted coaching on complete pitch flow and mandatory pitch points; review 3–5 calls where pitch was missed.");
       }
-      if (allText.includes("process") || allText.includes("procedure") || allText.includes("sop")) {
-        suggestions.push("Revisit SOPs for these query types and keep a quick reference sheet handy.");
+      if (allText.includes("uninformed") || allText.includes("information") || allText.includes("wrong info")) {
+        suggestions.push("Focus on giving complete and accurate information; use knowledge base / SOP while on call to avoid uninformed pointers.");
+      }
+      if (allText.includes("red-flagged") || allText.includes("red flagged") || allText.includes("compliance")) {
+        suggestions.push("Review compliance / red-flag scenarios with the agent and do a short quiz to ensure understanding.");
       }
       if (allText.includes("empathy") || allText.includes("tone") || allText.includes("rude")) {
-        suggestions.push("Plan a quick coaching on empathy, active listening and tone of voice.");
+        suggestions.push("Plan a short refresher on empathy, tone and handling difficult customers, with role-play examples.");
+      }
+      if (allText.includes("process") || allText.includes("procedure") || allText.includes("sop")) {
+        suggestions.push("Revisit SOP steps for the top 2–3 categories with high issue % and keep a quick reference checklist at desk.");
       }
       if (allText.includes("documentation") || allText.includes("disposition") || allText.includes("tagging")) {
-        suggestions.push("Reinforce correct documentation / disposition codes at the end of calls.");
+        suggestions.push("Reinforce correct documentation / disposition at end of call; audit a few tickets only for tagging accuracy.");
       }
 
       if (suggestions.length > 0) {
-        text += "Suggested next steps: " + suggestions.join(" ");
+        html += "<p><strong>Suggested next steps for this agent:</strong></p><ul>";
+        suggestions.forEach(s => {
+          html += `<li>${s}</li>`;
+        });
+        html += "</ul>";
       } else {
-        text += "Suggested next step: review a few issue calls in detail with the agent and agree on 2–3 concrete action points.";
+        html += "<p><strong>Suggested next step:</strong> review a sample of issue calls in coaching, agree on 2–3 clear behavioural goals, and re-check in the next audit cycle.</p>";
       }
 
-      return text;
+      return html;
     }
 
     window.addEventListener('load', init);
