@@ -86,9 +86,7 @@
     }
 
     select,
-    input[type="date"],
-    textarea,
-    input[type="text"] {
+    input[type="date"] {
       width: 100%;
       padding: 8px 9px;
       border-radius: var(--radius-sm);
@@ -99,18 +97,11 @@
     }
 
     select:focus,
-    input[type="date"]:focus,
-    textarea:focus,
-    input[type="text"]:focus {
+    input[type="date"]:focus {
       outline: none;
       border-color: var(--primary);
       background: #ffffff;
       box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.18);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 48px;
     }
 
     .date-row {
@@ -222,6 +213,17 @@
       border-left: 4px solid var(--accent);
       line-height: 1.5;
     }
+
+    /* Simple full-screen dialog overlay */
+    #disputeDialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
   </style>
 </head>
 <body>
@@ -260,8 +262,32 @@
     </main>
   </div>
 
+  <!-- Dispute popup -->
+  <div id="disputeDialog">
+    <div style="background:#fff; border-radius:10px; padding:14px 16px; width:320px; box-shadow:0 10px 25px rgba(15,23,42,0.35);">
+      <h3 style="margin:0 0 8px; font-size:14px;">Raise a dispute</h3>
+      <p style="margin:0 0 10px; font-size:12px; color:#5f6c80;">
+        Enter the SL No and a short description for the call you want to dispute.
+      </p>
+      <label style="margin-top:0; font-size:12px;">SL No</label>
+      <input id="dlgSl" type="text"
+             style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px;">
+      <label style="margin-top:8px; font-size:12px;">Description</label>
+      <textarea id="dlgDesc" rows="3"
+                style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px; resize:vertical;"></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+        <button type="button" onclick="closeDisputeDialog()" style="margin-top:0; padding-inline:10px; background:#e5e7eb; color:#111827; box-shadow:none;">
+          Cancel
+        </button>
+        <button type="button" onclick="submitDisputeFromDialog()" style="margin-top:0; padding-inline:12px;">
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const SCRIPT_URL = "YOUR_WEB_APP_URL_HERE"; // replace with your /exec URL
+    const SCRIPT_URL = "YOUR_WEB_APP_URL_HERE"; // <-- paste your /exec URL
 
     async function init() {
       const agentSelect = document.getElementById('agent');
@@ -436,28 +462,18 @@
 
       const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
 
+      // Summary on left, single Dispute button on right
       html += `
-        <h2 style="margin-top:18px;">Summary & Suggestions</h2>
-        <div class="summary-box">${issueSummary}</div>
-
-        <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e1e5f2;">
-          <h3 style="margin:0 0 6px; font-size:14px;">Raise a dispute</h3>
-          <p style="font-size:12px; margin:0 0 8px;">
-            If you want to dispute any audit, enter the SL No and short description. This will be sent to QA.
-          </p>
-          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start;">
-            <div style="flex:0 0 120px;">
-              <label style="margin-top:0; font-size:12px;">SL No</label>
-              <input id="disputeSl" type="text" style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px;">
-            </div>
-            <div style="flex:1 1 auto; min-width:180px;">
-              <label style="margin-top:0; font-size:12px;">Dispute description</label>
-              <textarea id="disputeDesc" rows="2" style="width:100%; padding:6px 7px; border-radius:6px; border:1px solid #cbd2e1; font-size:12px;"></textarea>
-            </div>
-            <div style="flex:0 0 auto; display:flex; flex-direction:column; gap:4px; margin-top:16px;">
-              <button type="button" onclick="submitDispute()" style="margin-top:0; padding-inline:12px;">🚩 Submit dispute</button>
-              <span id="disputeStatus" style="font-size:11px; color:#5f6c80;"></span>
-            </div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-top:18px; gap:12px;">
+          <div style="flex:1 1 auto;">
+            <h2 style="margin:0 0 4px;">Summary & Suggestions</h2>
+            <div class="summary-box">${issueSummary}</div>
+          </div>
+          <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <button type="button" onclick="openDisputeDialog()" style="margin-top:0; padding-inline:14px;">
+              🚩 Dispute
+            </button>
+            <span id="disputeStatus" style="font-size:11px; color:#5f6c80; max-width:180px; text-align:right;"></span>
           </div>
         </div>
       `;
@@ -508,9 +524,29 @@
       return text;
     }
 
-    async function submitDispute() {
-      const slInput = document.getElementById('disputeSl');
-      const descInput = document.getElementById('disputeDesc');
+    // ---- Dispute dialog helpers ----
+
+    function openDisputeDialog() {
+      const dlg = document.getElementById('disputeDialog');
+      const slInput = document.getElementById('dlgSl');
+      const descInput = document.getElementById('dlgDesc');
+      const statusSpan = document.getElementById('disputeStatus');
+
+      slInput.value = "";
+      descInput.value = "";
+      if (statusSpan) statusSpan.textContent = "";
+
+      dlg.style.display = "flex";
+    }
+
+    function closeDisputeDialog() {
+      const dlg = document.getElementById('disputeDialog');
+      dlg.style.display = "none";
+    }
+
+    async function submitDisputeFromDialog() {
+      const slInput = document.getElementById('dlgSl');
+      const descInput = document.getElementById('dlgDesc');
       const statusSpan = document.getElementById('disputeStatus');
 
       const slNo = (slInput.value || "").trim();
@@ -523,6 +559,7 @@
       if (!slNo || !description) {
         statusSpan.textContent = "Please enter SL No and description.";
         statusSpan.style.color = "#d32f2f";
+        closeDisputeDialog();
         return;
       }
 
@@ -547,16 +584,17 @@
         if (!data.ok) {
           statusSpan.textContent = "Error: " + (data.error || "Could not save dispute");
           statusSpan.style.color = "#d32f2f";
+          closeDisputeDialog();
           return;
         }
 
         statusSpan.textContent = "Dispute submitted. QA will review this SL No.";
         statusSpan.style.color = "#2e7d32";
-        slInput.value = "";
-        descInput.value = "";
+        closeDisputeDialog();
       } catch (err) {
         statusSpan.textContent = "Error: " + err.message;
         statusSpan.style.color = "#d32f2f";
+        closeDisputeDialog();
       }
     }
 
