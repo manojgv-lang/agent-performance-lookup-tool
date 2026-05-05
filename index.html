@@ -287,7 +287,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
+    const SCRIPT_URL = "YOUR_EXEC_URL_HERE";  <!-- replace with your /exec URL -->
 
     async function init() {
       const agentSelect = document.getElementById('agent');
@@ -541,6 +541,7 @@
       dlg.style.display = "none";
     }
 
+    // IMPORTANT: updated to send form-encoded POST (no CORS preflight)
     async function submitDisputeFromDialog() {
       const slInput = document.getElementById('dlgSl');
       const descInput = document.getElementById('dlgDesc');
@@ -564,20 +565,30 @@
       statusSpan.style.color = "#5f6c80";
 
       try {
+        const params = new URLSearchParams();
+        params.append("action", "dispute");
+        params.append("agent", agent);
+        params.append("slNo", slNo);
+        params.append("description", description);
+        params.append("from", from);
+        params.append("to", to);
+
         const res = await fetch(SCRIPT_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "dispute",
-            agent,
-            slNo,
-            description,
-            from,
-            to
-          })
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8"
+          },
+          body: params.toString()
         });
 
-        const data = await res.json();
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error("Invalid JSON from Apps Script: " + text);
+        }
+
         if (!data.ok) {
           statusSpan.textContent = "Error: " + (data.error || "Could not save dispute");
           statusSpan.style.color = "#d32f2f";
