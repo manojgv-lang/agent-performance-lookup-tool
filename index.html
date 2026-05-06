@@ -231,7 +231,7 @@
   <div class="shell">
     <header class="topbar">
       <div class="topbar-title">Agent QA Report</div>
-      <div class="topbar-sub">Select your name, enter password and dates, then get your QA insights.</div>
+      <div class="topbar-sub">Select your name, enter password and dates, then generate your QA report.</div>
     </header>
 
     <main class="main">
@@ -305,8 +305,8 @@
   </div>
 
   <script>
-    // Replace with your EXEC URL from step 2
-    const SCRIPT_URL = "YOUR_EXEC_URL_HERE";
+    // 1) Set this to your /exec URL from the Apps Script deployment
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbXXXXXXXXXXXX/exec";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -317,6 +317,7 @@
       }
     }
 
+    // 2) Load agents when page loads
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -347,6 +348,7 @@
       }
     }
 
+    // 3) Generate report (sends agent + from + to + password)
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
       const password = document.getElementById('password').value.trim();
