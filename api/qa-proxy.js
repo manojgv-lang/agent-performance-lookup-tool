@@ -14,9 +14,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Put your Apps Script Web app URL (from Step 1.2) here
+  // Your Apps Script Web App URL
   const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxcwCNPdtATTa25ZVxbeSER9vUuNjTTtEq3ozCojjquuVBThO6CinpelbSMrZqm3IfVFw/exec";
+    "https://script.google.com/macros/s/AKfycbxcwCNPdtATTa25ZVxbeSER9vUuNjTTtEq3ozCojjquuVBThO6CinpelbSMrZqm3IfVFw/exec";
 
   const target = `${SCRIPT_URL}?from=${encodeURIComponent(
     from
