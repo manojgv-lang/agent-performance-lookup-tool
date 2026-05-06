@@ -86,7 +86,8 @@
     }
 
     select,
-    input[type="date"] {
+    input[type="date"],
+    input[type="password"] {
       width: 100%;
       padding: 8px 9px;
       border-radius: var(--radius-sm);
@@ -97,7 +98,8 @@
     }
 
     select:focus,
-    input[type="date"]:focus {
+    input[type="date"]:focus,
+    input[type="password"]:focus {
       outline: none;
       border-color: var(--primary);
       background: #ffffff;
@@ -229,7 +231,7 @@
   <div class="shell">
     <header class="topbar">
       <div class="topbar-title">Agent QA Report</div>
-      <div class="topbar-sub">Filter any agent and generate QA insights in one click.</div>
+      <div class="topbar-sub">Select your name, enter password and dates, then get your QA insights.</div>
     </header>
 
     <main class="main">
@@ -240,6 +242,9 @@
         <select id="agent">
           <option value="">Loading...</option>
         </select>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Enter password">
 
         <div class="date-row">
           <div>
@@ -286,7 +291,7 @@
     </div>
   </div>
 
-  <!-- Resolution / clarification popup -->
+  <!-- Resolution popup -->
   <div id="resolutionDialog" style="position:fixed; inset:0; background:rgba(15,23,42,0.35); display:none; align-items:center; justify-content:center; z-index:9999;">
     <div style="background:#fff; border-radius:10px; padding:14px 16px; width:360px; max-width:95vw; box-shadow:0 10px 25px rgba(15,23,42,0.35);">
       <h3 style="margin:0 0 8px; font-size:14px;">Dispute details</h3>
@@ -300,8 +305,8 @@
   </div>
 
   <script>
-    // IMPORTANT: your working Apps Script web app URL
-    const SCRIPT_URL = "https://script.google.com/a/macros/voltmoney.in/s/AKfycbzI2JIIrRuNuEJIC-0ILxSgatU8AgKJGkXzJRYmUSd6kfiFRVddab21y5Va2P2jmDYU/exec";
+    // Replace with your EXEC URL from step 2
+    const SCRIPT_URL = "YOUR_EXEC_URL_HERE";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -312,7 +317,6 @@
       }
     }
 
-    // Load agents (already filtered per logged-in user) and auto-select if only one
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -337,12 +341,7 @@
           agentSelect.appendChild(opt);
         });
 
-        // Auto-select when only one agent is available
-        if (data.agents && data.agents.length === 1) {
-          agentSelect.value = data.agents[0];
-        }
-
-        status.textContent = "Agents loaded. Pick agent and dates, then Generate report.";
+        status.textContent = "Agents loaded. Select agent, enter password and dates.";
       } catch (err) {
         status.textContent = "Failed to load agents: " + err.message;
       }
@@ -350,20 +349,21 @@
 
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
+      const password = document.getElementById('password').value.trim();
       const from  = document.getElementById('from').value;
       const to    = document.getElementById('to').value;
       const status = document.getElementById('status');
       const btn    = document.getElementById('runBtn');
 
-      if (!agent || !from || !to) {
-        status.textContent = "Please select Agent, From and To dates.";
+      if (!agent || !password || !from || !to) {
+        status.textContent = "Please select Agent, enter Password, From and To dates.";
         return;
       }
 
       status.textContent = "Running...";
       btn.disabled = true;
 
-      const url = `${SCRIPT_URL}?agent=${encodeURIComponent(agent)}&from=${from}&to=${to}`;
+      const url = `${SCRIPT_URL}?agent=${encodeURIComponent(agent)}&from=${from}&to=${to}&password=${encodeURIComponent(password)}`;
 
       fetch(url)
         .then(r => safeJson(r))
