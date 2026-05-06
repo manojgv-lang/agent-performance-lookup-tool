@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   // Put your Apps Script Web app URL (from Step 1.2) here
   const SCRIPT_URL =
-    "https://script.google.com/a/macros/voltmoney.in/s/XXXXXXXXXXXX/exec";
+  "https://script.google.com/macros/s/AKfycbxcwCNPdtATTa25ZVxbeSER9vUuNjTTtEq3ozCojjquuVBThO6CinpelbSMrZqm3IfVFw/exec";
 
   const target = `${SCRIPT_URL}?from=${encodeURIComponent(
     from
