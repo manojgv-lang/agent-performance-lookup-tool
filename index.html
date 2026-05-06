@@ -229,18 +229,17 @@
   <div class="shell">
     <header class="topbar">
       <div class="topbar-title">Agent QA Report</div>
-      <div class="topbar-sub">This dashboard shows only your own QA data (based on your login).</div>
+      <div class="topbar-sub">Filter any agent and generate QA insights in one click.</div>
     </header>
 
     <main class="main">
       <section class="panel panel-filters">
         <h2 class="panel-title">Filters</h2>
 
-        <label>Agent</label>
-        <div id="agentDisplay"
-             style="font-size:13px; font-weight:600; padding:6px 8px; background:#f9fafb; border-radius:8px;">
-          Your dashboard (login-based)
-        </div>
+        <label for="agent">Agent</label>
+        <select id="agent">
+          <option value="">Loading...</option>
+        </select>
 
         <div class="date-row">
           <div>
@@ -254,7 +253,7 @@
         </div>
 
         <button id="runBtn" onclick="runReport()">🔍 Generate Report</button>
-        <div id="status">Select dates and click Generate report.</div>
+        <div id="status">Waiting...</div>
       </section>
 
       <section id="summary" class="panel" style="display:none;"></section>
@@ -301,8 +300,7 @@
   </div>
 
   <script>
-    // TODO: replace with your deployed Apps Script Web App URL
-    const SCRIPT_URL = "YOUR_APPS_SCRIPT_EXEC_URL_HERE";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -313,21 +311,52 @@
       }
     }
 
+    async function init() {
+      const agentSelect = document.getElementById('agent');
+      const status = document.getElementById('status');
+
+      status.textContent = "Loading agents...";
+
+      try {
+        const res = await fetch(`${SCRIPT_URL}?listAgents=1`);
+        const data = await safeJson(res);
+
+        if (!data.ok) {
+          status.textContent = "Error loading agents: " + (data.error || "Unknown error");
+          return;
+        }
+
+        agentSelect.innerHTML = '<option value="">Select agent…</option>';
+
+        (data.agents || []).forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          agentSelect.appendChild(opt);
+        });
+
+        status.textContent = "Agents loaded. Pick agent and dates, then Generate report.";
+      } catch (err) {
+        status.textContent = "Failed to load agents: " + err.message;
+      }
+    }
+
     function runReport() {
+      const agent = document.getElementById('agent').value.trim();
       const from  = document.getElementById('from').value;
       const to    = document.getElementById('to').value;
       const status = document.getElementById('status');
       const btn    = document.getElementById('runBtn');
 
-      if (!from || !to) {
-        status.textContent = "Please select From and To dates.";
+      if (!agent || !from || !to) {
+        status.textContent = "Please select Agent, From and To dates.";
         return;
       }
 
       status.textContent = "Running...";
       btn.disabled = true;
 
-      const url = `${SCRIPT_URL}?from=${from}&to=${to}`;
+      const url = `${SCRIPT_URL}?agent=${encodeURIComponent(agent)}&from=${from}&to=${to}`;
 
       fetch(url)
         .then(r => safeJson(r))
@@ -339,7 +368,8 @@
 
           renderSummary(data);
           renderCallsGrouped(data.calls);
-          await loadDisputes(from, to);
+
+          await loadDisputes(agent, from, to);
 
           status.textContent = "Done.";
         })
@@ -354,9 +384,6 @@
     function renderSummary(data) {
       const summaryDiv = document.getElementById('summary');
       summaryDiv.style.display = 'block';
-
-      const agentDisplay = document.getElementById('agentDisplay');
-      if (agentDisplay) agentDisplay.textContent = data.agent;
 
       summaryDiv.innerHTML = `
         <h2>Performance Summary</h2>
@@ -534,7 +561,8 @@
     }
 
     function closeDisputeDialog() {
-      document.getElementById('disputeDialog').style.display = "none";
+      const dlg = document.getElementById('disputeDialog');
+      dlg.style.display = "none";
     }
 
     async function submitDisputeFromDialog() {
@@ -545,8 +573,9 @@
       const slNo = (slInput.value || "").trim();
       const description = (descInput.value || "").trim();
 
+      const agent = (document.getElementById('agent').value || "").trim();
       const from = document.getElementById('from').value;
-      const to   = document.getElementById('to').value;
+      const to = document.getElementById('to').value;
 
       if (!slNo || !description) {
         statusSpan.textContent = "Please enter SL No and description.";
@@ -561,6 +590,7 @@
       try {
         const params = new URLSearchParams();
         params.append("action", "dispute");
+        params.append("agent", agent);
         params.append("slNo", slNo);
         params.append("description", description);
         params.append("from", from);
@@ -568,7 +598,9 @@
 
         const res = await fetch(SCRIPT_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8"
+          },
           body: params.toString()
         });
 
@@ -585,8 +617,8 @@
         statusSpan.style.color = "#2e7d32";
         closeDisputeDialog();
 
-        if (from && to) {
-          await loadDisputes(from, to);
+        if (agent && from && to) {
+          await loadDisputes(agent, from, to);
         }
       } catch (err) {
         statusSpan.textContent = "Error: " + err.message;
@@ -595,13 +627,13 @@
       }
     }
 
-    async function loadDisputes(from, to) {
+    async function loadDisputes(agent, from, to) {
       const panel = document.getElementById('disputesPanel');
       panel.style.display = 'block';
       panel.innerHTML = "<h2>Disputes</h2><p>Loading disputes...</p>";
 
       try {
-        const url = `${SCRIPT_URL}?listDisputes=1&from=${from}&to=${to}`;
+        const url = `${SCRIPT_URL}?listDisputes=1&agent=${encodeURIComponent(agent)}&from=${from}&to=${to}`;
         const res = await fetch(url);
         const data = await safeJson(res);
 
@@ -611,56 +643,50 @@
         }
 
         const list = data.disputes || [];
-        window.__lastDisputes = list;
+        if (list.length === 0) {
+          panel.innerHTML = "<h2>Disputes</h2><p>No disputes for this period.</p>";
+          return;
+        }
 
-        renderDisputesTable(list);
+        let html = `
+          <h2>Disputes</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>SL No</th>
+                <th>Description</th>
+                <th>Resolution / Clarification</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        list.forEach((d, idx) => {
+          const hasRes = (d.resolution || "").trim().length > 0;
+          const resShort = hasRes
+            ? d.resolution.length > 60 ? d.resolution.slice(0, 60) + "..." : d.resolution
+            : "(Pending)";
+
+          html += `
+            <tr style="cursor:${hasRes ? 'pointer' : 'default'};"
+                ${hasRes ? `onclick="showResolution(${idx})"` : ""}
+                data-index="${idx}">
+              <td>${d.timestamp || ""}</td>
+              <td>${d.slNo || ""}</td>
+              <td>${(d.description || "").replace(/\\n/g, "<br>")}</td>
+              <td>${resShort.replace(/\\n/g, "<br>")}</td>
+            </tr>
+          `;
+        });
+
+        html += "</tbody></table>";
+
+        panel.innerHTML = html;
+        window.__lastDisputes = list;
       } catch (err) {
         panel.innerHTML = `<h2>Disputes</h2><p>Error: ${err.message}</p>`;
       }
-    }
-
-    function renderDisputesTable(list) {
-      const panel = document.getElementById('disputesPanel');
-
-      if (!list || list.length === 0) {
-        panel.innerHTML = "<h2>Disputes</h2><p>No disputes for this period.</p>";
-        return;
-      }
-
-      let html = `
-        <h2>Disputes</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>SL No</th>
-              <th>Description</th>
-              <th>Resolution / Clarification</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      list.forEach((d, idx) => {
-        const hasRes = (d.resolution || "").trim().length > 0;
-        const resShort = hasRes
-          ? d.resolution.length > 60 ? d.resolution.slice(0, 60) + "..." : d.resolution
-          : "(Pending)";
-
-        html += `
-          <tr style="cursor:${hasRes ? 'pointer' : 'default'};"
-              ${hasRes ? `onclick="showResolution(${idx})"` : ""}
-              data-index="${idx}">
-            <td>${d.timestamp || ""}</td>
-            <td>${d.slNo || ""}</td>
-            <td>${(d.description || "").replace(/\\n/g, "<br>")}</td>
-            <td>${resShort.replace(/\\n/g, "<br>")}</td>
-          </tr>
-        `;
-      });
-
-      html += "</tbody></table>";
-      panel.innerHTML = html;
     }
 
     function showResolution(index) {
@@ -682,13 +708,11 @@
     }
 
     function closeResolutionDialog() {
-      document.getElementById('resolutionDialog').style.display = "none";
+      const dlg = document.getElementById('resolutionDialog');
+      dlg.style.display = "none";
     }
 
-    window.addEventListener('load', () => {
-      document.getElementById('status').textContent =
-        "Select dates and click Generate report. This dashboard is tied to your login.";
-    });
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>
