@@ -1,116 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Agent QA Report</title>
+  <meta charset="UTF-8" />
+  <title>Agent Performance Lookup Tool</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background:#f5f5f5;
-      margin:0;
-      padding:20px;
+      padding: 20px;
+      background: #f5f5f5;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+    }
+    .wrap {
+      max-width: 900px;
+      width: 100%;
     }
     h1 {
-      text-align:center;
-      margin-bottom:20px;
-    }
-    .container {
-      max-width:1100px;
-      margin:0 auto;
+      background: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin: 0 0 15px 0;
     }
     .card {
-      background:#fff;
-      border-radius:6px;
-      padding:16px 20px;
-      margin-bottom:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.1);
+      background: white;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     label {
-      display:block;
-      margin-top:8px;
-      margin-bottom:4px;
-      font-weight:bold;
+      display: block;
+      margin-top: 8px;
+      font-weight: 600;
     }
-    select, input[type="date"] {
-      width:100%;
-      padding:8px;
-      border-radius:4px;
-      border:1px solid #ccc;
-      box-sizing:border-box;
+    input, select {
+      padding: 6px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-width: 220px;
     }
     button {
-      margin-top:16px;
-      padding:10px 16px;
-      border:none;
-      border-radius:4px;
-      background:#1976d2;
-      color:white;
-      font-size:14px;
-      cursor:pointer;
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
     }
     button:disabled {
-      background:#90a4ae;
-      cursor:not-allowed;
-    }
-    #status {
-      margin-top:8px;
-      font-size:13px;
-      color:#333;
-    }
-    #summary h2,
-    #calls h2 {
-      margin-top:0;
+      background: #ccc;
+      cursor: not-allowed;
     }
     table {
-      border-collapse:collapse;
-      width:100%;
-      font-size:13px;
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
     }
     th, td {
-      padding:4px 8px;
-      border:1px solid #ddd;
-      vertical-align:top;
+      border: 1px solid #ddd;
+      padding: 6px;
+      vertical-align: top;
     }
     th {
-      background:#f3e5f5;
-      text-align:left;
+      background: #E1BEE7;
     }
-    .category-header {
-      background:#f3e5f5;
-      font-weight:bold;
-      padding:6px 8px;
-      margin-top:8px;
+    .good {
+      background: #E8F5E9;
     }
-    .good-row {
-      background:#e8f5e9;
+    .issue {
+      background: #FFEBEE;
     }
-    .issue-row {
-      background:#ffebee;
-    }
-    .summary-box {
-      white-space:pre-wrap;
-      font-size:13px;
+    #status {
+      margin-top: 10px;
+      color: #555;
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Agent QA Report</h1>
+  <div class="wrap">
+    <h1>🎯 Agent Performance Lookup Tool</h1>
 
     <div class="card">
-      <label for="agent">Agent</label>
+      <label>Agent Name</label>
       <select id="agent">
         <option value="">Loading...</option>
       </select>
 
-      <label for="from">From Date (yyyy-mm-dd)</label>
-      <input id="from" type="date">
+      <label>From Date (yyyy-mm-dd)</label>
+      <input id="from" type="date" />
 
-      <label for="to">To Date (yyyy-mm-dd)</label>
-      <input id="to" type="date">
+      <label>To Date (yyyy-mm-dd)</label>
+      <input id="to" type="date" />
 
       <button id="runBtn" onclick="runReport()">Generate Report</button>
-      <div id="status">Waiting...</div>
+      <div id="status"></div>
     </div>
 
     <div id="summary" class="card" style="display:none;"></div>
@@ -123,7 +113,6 @@
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
-
       status.textContent = "Loading agents...";
 
       try {
@@ -135,9 +124,8 @@
           return;
         }
 
-        agentSelect.innerHTML = '<option value="">-- Select Agent --</option>';
-
-        data.agents.forEach(name => {
+        agentSelect.innerHTML = '<option value="">Select agent...</option>';
+        (data.agents || []).forEach(name => {
           const opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
@@ -155,10 +143,10 @@
       const from  = document.getElementById('from').value;
       const to    = document.getElementById('to').value;
       const status = document.getElementById('status');
-      const btn    = document.getElementById('runBtn');
+      const btn = document.getElementById('runBtn');
 
       if (!agent || !from || !to) {
-        status.textContent = "Please select Agent, From and To dates.";
+        status.textContent = "Please fill Agent, From and To dates.";
         return;
       }
 
@@ -172,174 +160,173 @@
         .then(data => {
           if (!data.ok) {
             status.textContent = "Error: " + (data.error || "Unknown error");
+            btn.disabled = false;
             return;
           }
 
           renderSummary(data);
-          renderCallsGrouped(data.calls);
-
+          renderCallsWithInsights(data.calls);
           status.textContent = "Done.";
+          btn.disabled = false;
         })
         .catch(err => {
-          status.textContent = "Failed: " + err.message;
-        })
-        .finally(() => {
+          status.textContent = "Error: " + err.message;
           btn.disabled = false;
         });
     }
 
     function renderSummary(data) {
-      const summaryDiv = document.getElementById('summary');
-      summaryDiv.style.display = 'block';
-
-      summaryDiv.innerHTML = `
-        <h2>Performance Summary</h2>
-        <table>
-          <tr>
-            <td style="font-weight:bold;">Agent</td>
-            <td>${data.agent}</td>
-          </tr>
-          <tr>
-            <td style="font-weight:bold;">Total audits</td>
-            <td>${data.totalAudits}</td>
-          </tr>
-          <tr>
-            <td style="font-weight:bold;">Average score</td>
-            <td>${data.averageScore}%</td>
-          </tr>
-          <tr>
-            <td style="font-weight:bold;">Period</td>
-            <td>${data.period}</td>
-          </tr>
-        </table>
+      const div = document.getElementById('summary');
+      div.style.display = 'block';
+      div.innerHTML = `
+        <h2>📊 Performance Summary</h2>
+        <p><strong>Agent:</strong> ${data.agent}</p>
+        <p><strong>Total Audits:</strong> ${data.totalAudits}</p>
+        <p><strong>Average Score:</strong> ${data.averageScore}%</p>
+        <p><strong>Period:</strong> ${data.period}</p>
       `;
     }
 
-    // Call-by-call breakdown with Idle call removed
-    function renderCallsGrouped(calls) {
-      const callsDiv = document.getElementById('calls');
-      callsDiv.style.display = 'block';
+    function renderCallsWithInsights(calls) {
+      const div = document.getElementById('calls');
+      div.style.display = 'block';
 
-      // Remove Idle call rows
+      // remove idle calls
       calls = (calls || []).filter(c => {
         const q = (c.queryType || "").toLowerCase();
         return q !== "idle call";
       });
 
       if (!calls || calls.length === 0) {
-        callsDiv.innerHTML = "<h2>Call-by-call breakdown</h2><p>No calls in this period.</p>";
+        div.innerHTML = "<p>No calls in this period (excluding idle calls).</p>";
         return;
       }
 
-      const groups = {};
-      let totalGood = 0;
-      let totalIssues = 0;
-      const allIssueTexts = [];
-
-      calls.forEach(c => {
-        const category = c.queryType || "Other";
-        if (!groups[category]) groups[category] = [];
-        groups[category].push(c);
-      });
-
-      let html = '<h2>Call-by-call breakdown</h2>';
-
-      Object.keys(groups).forEach(cat => {
-        const list = groups[cat];
-        html += `<div class="category-header">${cat.toUpperCase()} (${list.length} calls)</div>`;
-        html += `
-          <table>
-            <thead>
-              <tr>
-                <th>SL No</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Feedback</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        list.forEach(c => {
-          const score = typeof c.score === "number" ? c.score : parseFloat(c.score || "0");
-          let statusText = "";
-          let rowClass = "";
-          if (!isNaN(score) && score >= 90) {
-            statusText = "✅ Good";
-            rowClass = "good-row";
-            totalGood++;
-          } else {
-            statusText = "❌ Issues";
-            rowClass = "issue-row";
-            totalIssues++;
-            if (c.feedback) {
-              allIssueTexts.push(c.feedback);
-            }
-          }
-
-          html += `
-            <tr class="${rowClass}">
-              <td style="text-align:center;">${c.slNo}</td>
-              <td>${c.queryType || ""}</td>
-              <td style="text-align:center;">${statusText}</td>
-              <td>${(c.feedback || "").replace(/\n/g, "<br>")}</td>
+      let html = `
+        <h2>📋 Call-by-Call Breakdown</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>SL No</th>
+              <th>Call Date</th>
+              <th>Issue Type</th>
+              <th>Score</th>
+              <th>Feedback</th>
             </tr>
-          `;
-        });
-
-        html += "</tbody></table>";
-      });
-
-      const issueSummary = buildSuggestions(totalGood, totalIssues, allIssueTexts);
-
-      html += `
-        <h2>Summary & Suggestions</h2>
-        <div class="summary-box">${issueSummary}</div>
+          </thead>
+          <tbody>
       `;
 
-      callsDiv.innerHTML = html;
+      let goodCount = 0;
+      let issueCount = 0;
+      const issueFeedbacks = [];
+      const goodFeedbacks = [];
+
+      calls.forEach(c => {
+        const scoreNum = typeof c.score === "number"
+          ? c.score
+          : parseFloat(c.score || "0");
+
+        let rowClass = "";
+        if (!isNaN(scoreNum) && scoreNum >= 90) {
+          rowClass = "good";
+          goodCount++;
+          if (c.feedback) goodFeedbacks.push(c.feedback);
+        } else {
+          rowClass = "issue";
+          issueCount++;
+          if (c.feedback) issueFeedbacks.push(c.feedback);
+        }
+
+        html += `
+          <tr class="${rowClass}">
+            <td>${c.slNo || ""}</td>
+            <td>${c.callDate || ""}</td>
+            <td>${c.queryType || ""}</td>
+            <td>${c.score != null ? c.score + "%" : ""}</td>
+            <td>${(c.feedback || "").replace(/\\n/g, "<br>")}</td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+
+      const strengthsText = buildStrengthsText(goodCount, goodFeedbacks);
+      const issuesText = buildIssuesText(issueCount, issueFeedbacks);
+
+      html += `
+        <div style="margin-top:12px; font-size:13px;">
+          <h3>✅ Key strengths</h3>
+          <p>${strengthsText}</p>
+
+          <h3>⚠️ Major improvement areas</h3>
+          <p>${issuesText}</p>
+        </div>
+      `;
+
+      div.innerHTML = html;
     }
 
-    function buildSuggestions(totalGood, totalIssues, issues) {
-      let text = "";
-      text += `📈 OVERALL: ${totalGood} good calls | ${totalIssues} calls with issues\n\n`;
+    function buildStrengthsText(goodCount, feedbacks) {
+      if (goodCount === 0) {
+        return "No high-scoring calls in this period.";
+      }
+      let text = `Agent handled ${goodCount} calls with strong quality. `;
 
-      if (issues.length > 0) {
-        text += "⚠️ TOP ISSUES:\n";
-        const freq = {};
-        issues.forEach(t => {
+      const joined = feedbacks.join(" ").toLowerCase();
+      const positives = [];
+      if (joined.includes("empathy") || joined.includes("empathetic")) {
+        positives.push("good empathy and tone");
+      }
+      if (joined.includes("process") || joined.includes("procedure") || joined.includes("sop")) {
+        positives.push("good adherence to process/SOP");
+      }
+      if (joined.includes("pitch") || joined.includes("sales")) {
+        positives.push("strong pitch and sales skills");
+      }
+      if (joined.includes("probing")) {
+        positives.push("effective probing questions");
+      }
+
+      if (positives.length > 0) {
+        text += "Observed strengths include " + positives.join(", ") + ".";
+      } else {
+        text += "Most good calls show consistent handling of queries and compliance.";
+      }
+      return text;
+    }
+
+    function buildIssuesText(issueCount, feedbacks) {
+      if (issueCount === 0) {
+        return "No major issues found in this period.";
+      }
+
+      let text = `There are ${issueCount} calls with issues. `;
+
+      const freq = {};
+      feedbacks.forEach(fb => {
+        fb.split(/[\.\n]/).forEach(line => {
+          const t = line.trim();
+          if (t.length < 5) return;
           const key = t.toLowerCase();
           freq[key] = (freq[key] || 0) + 1;
         });
-        const top = Object.keys(freq).sort((a,b) => freq[b]-freq[a]).slice(0,3);
-        top.forEach(i => {
-          const clean = i.charAt(0).toUpperCase() + i.slice(1);
-          text += `  • ${clean}\n`;
-        });
-        text += "\n";
+      });
+
+      const top = Object.keys(freq)
+        .sort((a, b) => freq[b] - freq[a])
+        .slice(0, 3);
+
+      if (top.length > 0) {
+        text += "Top recurring issues: ";
+        text += top
+          .map(t => t.charAt(0).toUpperCase() + t.slice(1))
+          .join("; ");
+        text += ".";
+      } else {
+        text += "Issues are spread across different behaviours without a single dominant pattern.";
       }
 
-      text += "💡 SUGGESTIONS:\n";
-      const total = totalGood + totalIssues;
-      const issueRate = total ? totalIssues / total : 0;
-
-      let count = 1;
-      if (issueRate > 0.5) {
-        text += `  ${count++}. PRIORITY: Focus on quality - ${Math.round(issueRate*100)}% calls have issues\n`;
-      }
-      const allIssueText = issues.join(" ").toLowerCase();
-      if (allIssueText.includes("pitch")) {
-        text += `  ${count++}. Practice pitch delivery and ensure all mandatory points are covered\n`;
-      }
-      if (allIssueText.includes("procedure") || allIssueText.includes("process")) {
-        text += `  ${count++}. Review standard operating procedures regularly\n`;
-      }
-      if (allIssueText.includes("empathetic") || allIssueText.includes("tone")) {
-        text += `  ${count++}. Work on empathy and tone while addressing customer concerns\n`;
-      }
-      if (count === 1) {
-        text += "  • Excellent performance! Maintain current standards\n";
-      }
       return text;
     }
 
