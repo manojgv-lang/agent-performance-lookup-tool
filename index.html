@@ -48,15 +48,13 @@
   </div>
 
   <script>
-    // 1) PUT YOUR SCRIPT URL HERE (exactly as from the Apps Script deployment)
-    const SCRIPT_URL = "https://script.google.com/a/macros/voltmoney.in/s/AKfycbxcwCNPdtATTa25ZVxbeSER9vUuNjTTtEq3ozCojjquuVBThO6CinpelbSMrZqm3IfVFw/exec";
+    // Call the Vercel proxy (NOT the Apps Script URL directly)
+    const SCRIPT_URL = "/api/qa-proxy";
 
     async function safeJson(res) {
       const text = await res.text();
       try { return JSON.parse(text); }
-      catch {
-        throw new Error("Not JSON: " + text.slice(0, 120));
-      }
+      catch { throw new Error("Not JSON: " + text.slice(0, 120)); }
     }
 
     function runReport() {
