@@ -85,7 +85,6 @@
       color: #425466;
     }
 
-    select,
     input[type="date"] {
       width: 100%;
       padding: 8px 9px;
@@ -96,7 +95,6 @@
       transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     }
 
-    select:focus,
     input[type="date"]:focus {
       outline: none;
       border-color: var(--primary);
@@ -301,8 +299,8 @@
   </div>
 
   <script>
-    // TODO: replace with your deployed Apps Script Web App URL
-    const SCRIPT_URL = "YOUR_APPS_SCRIPT_EXEC_URL_HERE";
+    // PASTE your Web app /exec URL here:
+    const SCRIPT_URL = "https://script.google.com/macros/s/PASTE_YOUR_EXEC_URL_HERE/exec";
 
     async function safeJson(res) {
       const text = await res.text();
