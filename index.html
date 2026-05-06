@@ -300,7 +300,8 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+    // IMPORTANT: your working Apps Script web app URL
+    const SCRIPT_URL = "https://script.google.com/a/macros/voltmoney.in/s/AKfycbzI2JIIrRuNuEJIC-0ILxSgatU8AgKJGkXzJRYmUSd6kfiFRVddab21y5Va2P2jmDYU/exec";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -311,7 +312,7 @@
       }
     }
 
-    // ---- HERE: init() with auto-select of single agent ----
+    // Load agents (already filtered per logged-in user) and auto-select if only one
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -327,10 +328,8 @@
           return;
         }
 
-        // Clear and add placeholder
         agentSelect.innerHTML = '<option value="">Select agent…</option>';
 
-        // Add options returned by backend (already filtered per user)
         (data.agents || []).forEach(name => {
           const opt = document.createElement('option');
           opt.value = name;
@@ -338,7 +337,7 @@
           agentSelect.appendChild(opt);
         });
 
-        // AUTO-SELECT when only one agent is available
+        // Auto-select when only one agent is available
         if (data.agents && data.agents.length === 1) {
           agentSelect.value = data.agents[0];
         }
@@ -348,7 +347,6 @@
         status.textContent = "Failed to load agents: " + err.message;
       }
     }
-    // ---- end of init() ----
 
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
