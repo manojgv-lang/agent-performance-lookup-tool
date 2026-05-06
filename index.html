@@ -48,8 +48,8 @@
   </div>
 
   <script>
-    // IMPORTANT: this now points to your Vercel API proxy
-    const SCRIPT_URL = "/api/qa-proxy";
+    // 1) PUT YOUR SCRIPT URL HERE (exactly as from the Apps Script deployment)
+    const SCRIPT_URL = "https://script.google.com/a/macros/voltmoney.in/s/AKfycbxcwCNPdtATTa25ZVxbeSER9vUuNjTTtEq3ozCojjquuVBThO6CinpelbSMrZqm3IfVFw/exec";
 
     async function safeJson(res) {
       const text = await res.text();
