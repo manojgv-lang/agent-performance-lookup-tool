@@ -300,7 +300,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnottuUJ8uDxE5IuDdpvXGoKbs14Sk4M_5jtOWwhcFu73NyJ8FWodl5SoA_V99V5vh/exec";
+    const SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
     async function safeJson(res) {
       const text = await res.text();
@@ -311,6 +311,7 @@
       }
     }
 
+    // ---- HERE: init() with auto-select of single agent ----
     async function init() {
       const agentSelect = document.getElementById('agent');
       const status = document.getElementById('status');
@@ -326,8 +327,10 @@
           return;
         }
 
+        // Clear and add placeholder
         agentSelect.innerHTML = '<option value="">Select agent…</option>';
 
+        // Add options returned by backend (already filtered per user)
         (data.agents || []).forEach(name => {
           const opt = document.createElement('option');
           opt.value = name;
@@ -335,11 +338,17 @@
           agentSelect.appendChild(opt);
         });
 
+        // AUTO-SELECT when only one agent is available
+        if (data.agents && data.agents.length === 1) {
+          agentSelect.value = data.agents[0];
+        }
+
         status.textContent = "Agents loaded. Pick agent and dates, then Generate report.";
       } catch (err) {
         status.textContent = "Failed to load agents: " + err.message;
       }
     }
+    // ---- end of init() ----
 
     function runReport() {
       const agent = document.getElementById('agent').value.trim();
